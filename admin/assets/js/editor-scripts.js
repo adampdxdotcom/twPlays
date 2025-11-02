@@ -16,24 +16,27 @@ jQuery(document).ready(function($) {
         }, 100); // Check every 100 milliseconds
     }
 
-    /* ==========================================================================
-   PLAY POD LIVE UPDATE (CUSTOM TITLE FIELD)
+/* ==========================================================================
+   PLAY POD LIVE UPDATE (CLASSIC EDITOR METHOD)
    ========================================================================== */
 if ($('body').hasClass('post-type-play')) {
-    waitForElement('#tw-plays-custom-title-input', function() {
+    // Wait for our custom input AND the original #title input to exist.
+    waitForElement('#tw-plays-custom-title-input, #title', function() {
 
-        var customTitleField = $('#tw-plays-custom-title-input');
+        var customTitleInput = $('#tw-plays-custom-title-input');
+        var realTitleInput   = $('#title'); // This is the real, hidden WordPress title field.
 
-        // This function syncs our fake title to the real WordPress title data store
-        function syncTitle() {
-            var newTitle = customTitleField.val();
-            if (typeof newTitle !== 'undefined' && typeof wp.data !== 'undefined') {
-                wp.data.dispatch('core/editor').editPost({ title: newTitle });
-            }
+        // This function copies the text from our custom field to the real one.
+        function syncTitles() {
+            var newTitle = customTitleInput.val();
+            realTitleInput.val(newTitle);
         }
 
-        // Run the sync function whenever the user types, pastes, or changes the field
-        customTitleField.on('keyup paste change', syncTitle);
+        // Run the sync function whenever the user types or pastes.
+        customTitleInput.on('keyup paste change', syncTitles);
+
+        // Sync on page load in case we are editing an existing post.
+        syncTitles();
     });
 }
     
