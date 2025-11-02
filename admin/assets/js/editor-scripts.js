@@ -1,7 +1,34 @@
 // admin/assets/js/editor-scripts.js
 
 jQuery(document).ready(function($) {
-    // A delay to ensure all Block Editor and Pods components are loaded.
+
+    // =========================================================================
+    // NEW FOR 'PLAY' POD: Sync our custom title field with the real one.
+    // This runs immediately because it doesn't depend on the Block Editor.
+    // =========================================================================
+    if ($('body').hasClass('post-type-play')) {
+        
+        var customTitleInput = $('#tw-plays-post-title');
+        var originalTitleInput = $('#title'); // The ID of the original WordPress title input
+
+        // Ensure both fields exist before trying to do anything.
+        if (customTitleInput.length && originalTitleInput.length) {
+            
+            function syncTitles() {
+                originalTitleInput.val(customTitleInput.val());
+            }
+
+            // Sync whenever the user types, pastes, or changes the custom input.
+            customTitleInput.on('keyup paste change', syncTitles);
+            
+            // Run once on page load to handle pre-filled titles when editing an existing play.
+            syncTitles();
+        }
+    }
+
+
+    // A delay for the Block Editor scripts to ensure components are loaded.
+    // This is for all the other pods that still use the block editor.
     setTimeout(function() {
 
         /* ==========================================================================
@@ -19,7 +46,7 @@ jQuery(document).ready(function($) {
                 if (crewValue) titleParts.push(crewValue);
                 if (playValue) titleParts.push(playValue);
                 var newTitle = titleParts.join(' - ');
-                if (newTitle) {
+                if (newTitle && typeof wp.data !== 'undefined') {
                     wp.data.dispatch('core/editor').editPost({ title: newTitle });
                 }
             }
@@ -40,7 +67,7 @@ jQuery(document).ready(function($) {
 
             function updateActorTitle() {
                 var newTitle = actorNameField.val();
-                if (newTitle) {
+                if (newTitle && typeof wp.data !== 'undefined') {
                     wp.data.dispatch('core/editor').editPost({ title: newTitle });
                 }
             }
@@ -59,7 +86,7 @@ jQuery(document).ready(function($) {
 
             function updateCastingTitle() {
                 var newTitle = characterNameField.val();
-                if (newTitle) {
+                if (newTitle && typeof wp.data !== 'undefined') {
                     wp.data.dispatch('core/editor').editPost({ title: newTitle });
                 }
             }
@@ -89,7 +116,9 @@ jQuery(document).ready(function($) {
                     var endYear = endDateValue.split('-')[0];
 
                     var newTitle = positionValue + ' ' + startYear + '-' + endYear;
-                    wp.data.dispatch('core/editor').editPost({ title: newTitle });
+                    if (typeof wp.data !== 'undefined') {
+                        wp.data.dispatch('core/editor').editPost({ title: newTitle });
+                    }
                 }
             }
             
@@ -118,7 +147,7 @@ jQuery(document).ready(function($) {
                 
                 var newTitle = $(this).val();
 
-                if (newTitle) {
+                if (newTitle && typeof wp.data !== 'undefined') {
                     wp.data.dispatch('core/editor').editPost({ title: newTitle });
                 }
             });
@@ -134,7 +163,7 @@ jQuery(document).ready(function($) {
                 
                 var newTitle = $(this).val();
 
-                if (newTitle) {
+                if (newTitle && typeof wp.data !== 'undefined') {
                     wp.data.dispatch('core/editor').editPost({ title: newTitle });
                 }
             });
