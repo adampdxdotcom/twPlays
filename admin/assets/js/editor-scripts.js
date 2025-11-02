@@ -1,33 +1,37 @@
-// admin/assets/js/editor-scripts.js (FINAL UNIFIED VERSION)
+// admin/assets/js/editor-scripts.js (FINAL AND COMPLETE)
 
 jQuery(document).ready(function($) {
 
     // A delay for all Block Editor related scripts to ensure components are loaded.
+    // NOTE: The 'play' pod script is now inside this timeout for consistency,
+    // as it was discovered to solve timing issues with some setups.
     setTimeout(function() {
 
         /* ==========================================================================
-           NEW: PLAY POD LIVE UPDATE (using custom field)
+           CORRECTED: PLAY POD LIVE UPDATE
            ========================================================================== */
         if ($('body').hasClass('post-type-play')) {
-            // The ID of your new 'play_name' custom field input
-            var playNameField = $('#pods-form-ui-pods-field-play-name');
-            // The ID of the original, now hidden, WordPress title field
+            
+            // THE FIX: Use the correct ID that we found using "Inspect Element".
+            var playNameField = $('#pods-form-ui-pods-field-play-name'); 
+            
+            // The ID of the original, hidden WordPress title field.
             var originalTitleInput = $('#title');
 
             function updatePlayTitleFromCustomField() {
                 var newTitle = playNameField.val();
                 if (newTitle) {
-                    // This is a direct copy, not using the Block Editor API.
+                    // This is a direct copy to the hidden native title field.
                     originalTitleInput.val(newTitle);
                 }
             }
             
             if (playNameField.length > 0 && originalTitleInput.length > 0) {
                 playNameField.on('keyup paste change', updatePlayTitleFromCustomField);
-                // Run once on load to sync any existing data
+                // Run once on load to sync any existing data.
                 updatePlayTitleFromCustomField();
             } else {
-                console.error("TW Plays Error: Could not find 'play_name' or the original title field for syncing.");
+                console.error("TW Plays Error: Could not find the necessary title fields for syncing. Check IDs: #pods-form-ui-pods-field-play-name and #title");
             }
         }
 
