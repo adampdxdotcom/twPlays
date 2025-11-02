@@ -32,6 +32,7 @@ add_action( 'init', 'tw_plays_remove_editor_support_for_play' );
 function tw_plays_move_pods_meta_box() {
     // This hook runs after all meta boxes have been registered.
     add_action( 'add_meta_boxes', function() {
+		die('The add_meta_boxes action IS running!');
         global $wp_meta_boxes;
 
         // The ID for the Pods meta box.
