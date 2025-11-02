@@ -1,10 +1,10 @@
 <?php
 /**
- * Customizations for the 'Play' Pod Editor Screen. (FINAL - WHITESPACE COLLAPSE)
+ * Customizations for the 'Play' Pod Editor Screen. (FINAL - CUSTOM TITLE FIELD)
  *
- * This file's only job is to inject targeted CSS into the admin head.
- * This CSS overrides the Block Editor's default minimum height, effectively
- * collapsing the empty content area and removing the large white space.
+ * This version hides the entire default Block Editor interface and creates its
+ * own custom title field. This provides full control over the layout, guarantees
+ * the removal of white space, and creates a clean data-entry UI.
  *
  * @package TW_Plays
  */
@@ -14,56 +14,102 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// 1. Ensure the Block Editor and its title field are enabled.
+// 1. Ensure post type supports 'title' in the backend.
 function tw_plays_modify_play_editor_support_final() {
     add_post_type_support( 'play', 'title' );
 }
 add_action( 'init', 'tw_plays_modify_play_editor_support_final' );
 
+// 2. Add our custom meta boxes.
+function tw_plays_add_all_custom_meta_boxes() {
+    // Box 1: Our custom title field, placed at the very top.
+    add_meta_box(
+        'tw_plays_custom_title_box',
+        'Play Title', // This title is hidden by CSS
+        'tw_plays_render_custom_title_box',
+        'play',
+        'advanced',
+        'high'
+    );
+    // Box 2: Our reliable Pods fields box.
+    add_meta_box(
+        'tw_plays_custom_fields_box',
+        'Play Details',
+        'tw_plays_render_custom_meta_box_final',
+        'play',
+        'advanced',
+        'high'
+    );
+}
+add_action( 'add_meta_boxes', 'tw_plays_add_all_custom_meta_boxes' );
 
-// 2. Inject the CSS to collapse the editor's main content area.
-function tw_plays_collapse_editor_area_css() {
-    // A list of all post types that should have the collapsed editor UI.
-    $post_types_to_modify = [ 'play', 'actor', 'crew', 'casting_record', 'board_term', 'positions', 'location', 'event' ];
+/**
+ * 3. Render the content of our custom title box.
+ * This is just a large input field styled to look like the default title.
+ */
+function tw_plays_render_custom_title_box( $post ) {
+    echo '<div class="tw-plays-custom-title-container">';
+    echo '<input type="text" name="tw_plays_custom_title_input" id="tw-plays-custom-title-input" value="' . esc_attr( $post->post_title ) . '" placeholder="Play Name Here" autocomplete="off" />';
+    echo '</div>';
+}
+
+/**
+ * 4. Render the content of our Pods meta box.
+ */
+function tw_plays_render_custom_meta_box_final( $post ) {
+    if ( function_exists( 'pods' ) ) {
+        $pod = pods( 'play', $post->ID );
+        echo $pod->form();
+    }
+}
+
+// 5. Inject CSS to completely hide the default editor and style our new title field.
+function tw_plays_hide_block_editor_and_style_title() {
     $current_screen = get_current_screen();
-
-    // Check if we are on an edit screen for one of the specified post types.
-    if ( $current_screen && in_array( $current_screen->post_type, $post_types_to_modify ) ) {
+    if ( $current_screen && 'play' === $current_screen->post_type ) {
         echo '
         <style>
-            /*
-             * THE KEY FIX:
-             * This targets the inner content area and overrides its default
-             * minimum height, allowing it to shrink down to nothing.
-             * This makes the container "smaller" without hiding it.
-            */
-            .block-editor-block-list__layout {
-                min-height: 0 !important;
+            /* Hide the entire Block Editor main area */
+            #editor .edit-post-visual-editor,
+            /* Hide the top bar with the block tools */
+            .edit-post-header {
+                display: none !important;
             }
 
-            /*
-             * This reduces the padding of the parent container,
-             * bringing the meta boxes up closer to the title for a clean look.
-            */
-            .edit-post-visual-editor__content-area {
-                padding-top: 20px !important;
-                padding-bottom: 0 !important;
+            /* --- Style Our Custom Title Field --- */
+            /* Hide the meta box chrome (title, border) around our custom title */
+            #tw_plays_custom_title_box .hndle,
+            #tw_plays_custom_title_box .handle-actions { display: none; }
+            #tw_plays_custom_title_box .inside { margin: 0; padding: 0; }
+            #tw_plays_custom_title_box { border: none; background: transparent; }
+
+            /* Style the input itself to look like the real title */
+            #tw-plays-custom-title-input {
+                width: 100%;
+                border: none;
+                box-shadow: none;
+                padding: 10px 0;
+                font-size: 2em;
+                font-weight: 600;
+                line-height: 1.4;
+                height: auto;
+                background: transparent;
+            }
+            #tw-plays-custom-title-input:focus {
+                box-shadow: none;
+                outline: none;
             }
         </style>';
     }
 }
-// Hook into the admin head for both new and existing post edit screens.
-add_action( 'admin_head-post.php', 'tw_plays_collapse_editor_area_css' );
-add_action( 'admin_head-post-new.php', 'tw_plays_collapse_editor_area_css' );
+add_action( 'admin_head', 'tw_plays_hide_block_editor_and_style_title' );
 
 
-// 3. Enqueue other assets. This is still useful for your JS and other CSS.
+// 6. Enqueue assets (unchanged).
 function tw_plays_enqueue_play_editor_assets_final( $hook_suffix ) {
     global $post_type;
-    $pod_slugs = [ 'play', 'actor', 'crew', 'casting_record', 'board_term', 'positions', 'location', 'event' ];
-    if ( ( 'post-new.php' === $hook_suffix || 'post.php' === $hook_suffix ) && in_array( $post_type, $pod_slugs ) ) {
-        wp_enqueue_style( 'tw-plays-admin-styles', TW_PLAYS_URL . 'admin/assets/css/admin-styles.css', [], '1.8.0' );
-        wp_enqueue_script( 'tw-plays-editor-scripts-js', TW_PLAYS_URL . 'admin/assets/js/editor-scripts.js', [ 'jquery' ], '1.8.0', true );
+    if ( ( 'post-new.php' === $hook_suffix || 'post.php' === $hook_suffix ) && 'play' === $post_type ) {
+        wp_enqueue_script( 'tw-plays-editor-scripts-js', TW_PLAYS_URL . 'admin/assets/js/editor-scripts.js', [ 'jquery', 'wp-data' ], '1.9.0', true );
     }
 }
 add_action( 'admin_enqueue_scripts', 'tw_plays_enqueue_play_editor_assets_final' );
