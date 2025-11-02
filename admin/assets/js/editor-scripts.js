@@ -17,25 +17,24 @@ jQuery(document).ready(function($) {
     }
 
     /* ==========================================================================
-       PLAY POD LIVE UPDATE (using waitForElement)
+       PLAY POD LIVE UPDATE 
        ========================================================================== */
     if ($('body').hasClass('post-type-play')) {
-        // Wait for both fields to exist before running the sync logic.
+        // Wait for both the visible custom field AND the hidden title field to exist.
         waitForElement('#pods-form-ui-pods-field-play-name, #title', function() {
             var playNameField = $('#pods-form-ui-pods-field-play-name');
             var originalTitleInput = $('#title');
 
             function updatePlayTitleFromCustomField() {
                 var newTitle = playNameField.val();
-                if (newTitle) {
+                if (typeof newTitle !== 'undefined') {
                     originalTitleInput.val(newTitle);
                 }
             }
             
             if (playNameField.length > 0 && originalTitleInput.length > 0) {
-                console.log("TW PLAYS SUCCESS: 'Play' title fields found and sync is active.");
                 playNameField.on('keyup paste change', updatePlayTitleFromCustomField);
-                updatePlayTitleFromCustomField();
+                updatePlayTitleFromCustomField(); // Sync on page load
             }
         });
     }
