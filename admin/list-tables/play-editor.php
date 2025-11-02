@@ -48,24 +48,7 @@ function tw_plays_render_custom_meta_box_final( $post ) {
     }
 }
 
-// 4. Hide unnecessary elements using CSS.
-function tw_plays_hide_original_elements_css_final() {
-    global $post_type;
-    if ( 'play' === $post_type ) {
-        // Rule 1: Hides the main block writing area ("Type / to choose a block").
-        // Rule 2: Hides the native (and blank) "More Fields" Pods box to prevent duplication.
-        echo '<style>
-            .block-editor-writing-flow,
-            #pods-meta-more-fields {
-                display: none !important;
-            }
-        </style>';
-    }
-}
-add_action( 'admin_head-post.php', 'tw_plays_hide_original_elements_css_final' );
-add_action( 'admin_head-post-new.php', 'tw_plays_hide_original_elements_css_final' );
-
-// 5. Enqueue assets for title-syncing and styling. (No changes needed here)
+// 4. Enqueue assets for title-syncing and styling.
 function tw_plays_enqueue_play_editor_assets_final( $hook_suffix ) {
     global $post_type;
     $pod_slugs = [ 'play', 'actor', 'crew', 'casting_record', 'board_term', 'positions' ];
