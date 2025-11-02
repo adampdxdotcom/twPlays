@@ -15,9 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Include the core plugin components.
- *
- * We use the TW_PLAYS_PATH constant defined in the main plugin file
- * to ensure our paths are always correct.
  */
 
 // Loads the admin menu and handles menu modifications.
@@ -25,3 +22,6 @@ require_once TW_PLAYS_PATH . 'admin/menu.php';
 
 // Loads the custom dashboard page content.
 require_once TW_PLAYS_PATH . 'admin/dashboard-page.php';
+
+// --- NEW: Loads the custom columns and AJAX functionality for the Play list table. ---
+require_once TW_PLAYS_PATH . 'admin/list-tables/play-columns.php';
