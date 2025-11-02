@@ -1,6 +1,6 @@
 <?php
 /**
- * Customizations for the 'Play' Pod Editor Screen.
+ * Customizations for the 'Play' Pod Editor Screen. (v2 - More Robust)
  *
  * This file removes the default block editor and repositions the Pods custom
  * fields meta box for a cleaner, form-like data entry experience.
@@ -15,58 +15,50 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * 1. Remove the main block editor for the 'play' post type.
+ * This runs on 'init' and should work reliably.
  */
 function tw_plays_remove_editor_support_for_play() {
-    // We only want to run this once.
-    if ( ! post_type_supports( 'play', 'editor' ) ) {
-        return;
-    }
     remove_post_type_support( 'play', 'editor' );
 }
 add_action( 'init', 'tw_plays_remove_editor_support_for_play' );
 
 
 /**
- * 2. Move the Pods "More Fields" meta box to a high-priority position.
+ * 2. REVISED: Move the Pods "More Fields" meta box.
+ *
+ * This new version uses a different, more direct hook ('edit_form_after_title')
+ * to physically output the Pods meta box right after the title field. It's
+ * generally more reliable than trying to manipulate the global meta box array.
  */
-function tw_plays_move_pods_meta_box() {
-    // This hook runs after all meta boxes have been registered.
-    add_action( 'add_meta_boxes', function() {
-        global $wp_meta_boxes;
-
-        // The ID for the Pods meta box.
-        $pods_box_id = 'pods-meta-more-fields';
-        $post_type = 'play';
-
-        // Check if the Pods meta box exists for this post type.
-        if ( isset( $wp_meta_boxes[ $post_type ]['normal']['core'][ $pods_box_id ] ) ) {
-
-            // Grab the entire meta box object.
-            $pods_box = $wp_meta_boxes[ $post_type ]['normal']['core'][ $pods_box_id ];
-            
-            // Unset it from its original, low-priority position.
-            unset( $wp_meta_boxes[ $post_type ]['normal']['core'][ $pods_box_id ] );
-            
-            // Add it back in the 'advanced' context with 'high' priority.
-            // This moves it directly below the title.
-            $wp_meta_boxes[ $post_type ]['advanced']['high'][ $pods_box_id ] = $pods_box;
+function tw_plays_render_pods_box_after_title( $post ) {
+    // We only want this to run on our 'play' post type.
+    if ( 'play' !== $post->post_type ) {
+        return;
+    }
+    
+    // Manually render the Pods meta box in this new location.
+    // 'pods-meta-more-fields' is the ID, 'play' is the screen, 'normal' is the context.
+    do_meta_boxes( get_current_screen(), 'normal', $post );
+    
+    // We also need to hide the original meta box so it doesn't appear twice.
+    ?>
+    <style>
+        #pods-meta-more-fields {
+            display: none;
         }
-    }, 100 ); // Run with a late priority to ensure Pods has already added its box.
+    </style>
+    <?php
 }
-// Run our function only when on an admin screen.
-add_action( 'admin_init', 'tw_plays_move_pods_meta_box' );
-
+add_action( 'edit_form_after_title', 'tw_plays_render_pods_box_after_title' );
 
 /**
  * 3. Enqueue a specific stylesheet for the 'play' editor screen.
+ * This part remains the same.
  */
 function tw_plays_enqueue_play_editor_assets( $hook_suffix ) {
     global $post_type;
 
-    // Only load our assets on the 'Add New' or 'Edit' screens for the 'play' post type.
     if ( ( 'post-new.php' === $hook_suffix || 'post.php' === $hook_suffix ) && 'play' === $post_type ) {
-        
-        // We can reuse the main admin stylesheet for consistency.
         wp_enqueue_style(
             'tw-plays-play-editor-styles',
             TW_PLAYS_URL . 'admin/assets/css/admin-styles.css',
