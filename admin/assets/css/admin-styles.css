@@ -1,0 +1,83 @@
+/**
+ * Custom Styles for the TW Plays Admin Dashboard
+ */
+
+/* Add some general spacing to the dashboard sections */
+.tw-plays-dashboard .dashboard-section {
+    margin-top: 30px;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    padding: 1px 20px 20px;
+}
+
+.tw-plays-dashboard .dashboard-section h2 {
+    font-size: 1.2em;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+
+/* --- Styles for "At a Glance" Statistics --- */
+
+/* Use CSS Grid for a flexible, responsive layout of the stat boxes */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
+}
+
+/* Individual stat box styling */
+.stat-box {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+}
+
+.stat-box:hover {
+    border-color: #007cba; /* WordPress blue */
+    box-shadow: 0 2px 5px rgba(0, 124, 186, 0.2);
+    transform: translateY(-2px);
+}
+
+.stat-box a {
+    display: block;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* The large number count */
+.stat-box .stat-count {
+    display: block;
+    font-size: 2.8em;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #2271b1; /* A darker WordPress blue */
+}
+
+/* The label for the stat (e.g., "Plays") */
+.stat-box .stat-label {
+    display: block;
+    font-size: 1.1em;
+    color: #50575e; /* WordPress text color */
+    margin-top: 5px;
+}
+
+
+/* --- Styles for "Quick Links" Buttons --- */
+
+/* Use Flexbox for the button container */
+.quick-links-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px; /* Spacing between buttons */
+}
+
+/* Style for the "Add New" buttons */
+.quick-links-container .button-primary {
+    font-size: 14px;
+    padding: 8px 16px;
+    height: auto;
+}
