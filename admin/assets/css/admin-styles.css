@@ -153,3 +153,36 @@
     padding: 8px;
     box-sizing: border-box;
 }
+
+/* ===================================================================
+   EDITOR LAYOUT: Collapse the Block Editor Content Area
+   =================================================================== */
+
+/*
+ * Apply these rules to all post types where we only want to see
+ * the title and the meta boxes, not the block content area.
+*/
+.post-type-play .edit-post-visual-editor__content-area,
+.post-type-actor .edit-post-visual-editor__content-area,
+.post-type-crew .edit-post-visual-editor__content-area,
+.post-type-casting_record .edit-post-visual-editor__content-area,
+.post-type-board_term .edit-post-visual-editor__content-area,
+.post-type-positions .edit-post-visual-editor__content-area,
+.post-type-location .edit-post-visual-editor__content-area,
+.post-type-event .edit-post-visual-editor__content-area {
+    /* Removes the excess vertical padding from the main container */
+    padding-top: 20px !important; /* Keep a little space below the title */
+    padding-bottom: 0 !important;
+}
+
+.post-type-play .block-editor-block-list__layout,
+.post-type-actor .block-editor-block-list__layout,
+.post-type-crew .block-editor-block-list__layout,
+.post-type-casting_record .block-editor-block-list__layout,
+.post-type-board_term .block-editor-block-list__layout,
+.post-type-positions .block-editor-block-list__layout,
+.post-type-location .block-editor-block-list__layout,
+.post-type-event .block-editor-block-list__layout {
+    /* Hides the inner container that holds the "Type / to choose a block" placeholder */
+    display: none !important;
+}
