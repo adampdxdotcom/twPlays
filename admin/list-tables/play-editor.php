@@ -69,6 +69,9 @@ function tw_plays_hide_block_editor_and_style_title() {
     if ( $current_screen && 'play' === $current_screen->post_type ) {
         echo '
         <style>
+		    #pods-meta-more-fields {
+                display: none !important;
+            }
             /* Hide the entire Block Editor main area */
             #editor .edit-post-visual-editor,
             /* Hide the top bar with the block tools */
