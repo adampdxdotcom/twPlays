@@ -1,6 +1,10 @@
 <?php
 /**
- * Customizations for the 'Play' Pod Editor Screen.
+ * Customizations for the 'Play' Pod Editor Screen. (SIMPLIFIED VERSION)
+ *
+ * This version removes the custom meta box and relies on the native Pods meta box.
+ * It keeps the Block Editor enabled in a minimal state (title only) and enqueues
+ * assets for title-syncing functionality.
  *
  * @package TW_Plays
  */
@@ -10,49 +14,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// 1. Modify post type support for 'play'.
+// 1. Ensure the Block Editor is enabled for the 'play' post type.
 function tw_plays_modify_play_editor_support_final() {
-    // We no longer remove 'editor' support, allowing the Block Editor to load.
-    // This makes the 'play' CPT consistent with the others.
+    // This ensures the modern editor loads, making it consistent with other post types.
     add_post_type_support( 'play', 'title' );
 }
 add_action( 'init', 'tw_plays_modify_play_editor_support_final' );
 
-// 2. Add our custom meta box.
-function tw_plays_add_custom_meta_box_final() {
-    add_meta_box( 'tw_plays_custom_fields_box', 'Play Details', 'tw_plays_render_custom_meta_box_final', 'play', 'advanced', 'high' );
-}
-add_action( 'add_meta_boxes', 'tw_plays_add_custom_meta_box_final' );
 
-/**
- * 3. Render the content of our custom meta box.
- *    REMOVED: The hidden #title field is no longer needed.
- */
-function tw_plays_render_custom_meta_box_final( $post ) {
-    // We no longer need the hidden title input. Just render the Pods form.
-    // The native Block Editor title field will be used instead.
-    if ( function_exists( 'pods' ) ) {
-        $pod = pods( 'play', $post->ID );
-        echo $pod->form();
-    }
-}
+// 2. We have removed the 'add_meta_box' and its render callback function.
+//    The native Pods meta box ("More Fields") will now be used instead.
 
-// 4. Hide original elements using CSS.
+
+// 3. Hide the main writing area of the Block Editor using CSS.
 function tw_plays_hide_original_elements_css_final() {
     global $post_type;
     if ( 'play' === $post_type ) {
-        // We now only hide the main block writing area ("Type / to choose a block"),
-        // as the native title field is now visible and desired.
+        // Hides the "Type / to choose a block" area, leaving a clean interface.
         echo '<style>.block-editor-writing-flow { display: none !important; }</style>';
     }
 }
 add_action( 'admin_head-post.php', 'tw_plays_hide_original_elements_css_final' );
 add_action( 'admin_head-post-new.php', 'tw_plays_hide_original_elements_css_final' );
 
-// 5. Enqueue assets.
+// 4. Enqueue assets for title-syncing and styling.
 function tw_plays_enqueue_play_editor_assets_final( $hook_suffix ) {
     global $post_type;
-    // This list can remain as is, it correctly targets all relevant post types.
+    // This list correctly targets all relevant post types.
     $pod_slugs = [ 'play', 'actor', 'crew', 'casting_record', 'board_term', 'positions' ];
     if ( ( 'post-new.php' === $hook_suffix || 'post.php' === $hook_suffix ) && in_array( $post_type, $pod_slugs ) ) {
         wp_enqueue_style( 'tw-plays-admin-styles', TW_PLAYS_URL . 'admin/assets/css/admin-styles.css', [], '1.5.0' );
