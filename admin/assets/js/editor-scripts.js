@@ -17,6 +17,28 @@ jQuery(document).ready(function($) {
     }
 
     /* ==========================================================================
+   PLAY POD LIVE UPDATE (CUSTOM TITLE FIELD)
+   ========================================================================== */
+if ($('body').hasClass('post-type-play')) {
+    waitForElement('#tw-plays-custom-title-input', function() {
+
+        var customTitleField = $('#tw-plays-custom-title-input');
+
+        // This function syncs our fake title to the real WordPress title data store
+        function syncTitle() {
+            var newTitle = customTitleField.val();
+            if (typeof newTitle !== 'undefined' && typeof wp.data !== 'undefined') {
+                wp.data.dispatch('core/editor').editPost({ title: newTitle });
+            }
+        }
+
+        // Run the sync function whenever the user types, pastes, or changes the field
+        customTitleField.on('keyup paste change', syncTitle);
+    });
+}
+    
+    
+    /* ==========================================================================
        SECTION 1: CREW POD LIVE UPDATE
        ========================================================================== */
     if ($('body').hasClass('post-type-crew')) {
