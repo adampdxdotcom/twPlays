@@ -10,30 +10,26 @@ jQuery(document).ready(function($) {
         /* ==========================================================================
            CORRECTED: PLAY POD LIVE UPDATE
            ========================================================================== */
-        if ($('body').hasClass('post-type-play')) {
-            
-            // THE FIX: Use the correct ID that we found using "Inspect Element".
-            var playNameField = $('#pods-form-ui-pods-field-play-name'); 
-            
-            // The ID of the original, hidden WordPress title field.
+    if ($('body').hasClass('post-type-play')) {
+        // We need to wait for BOTH the custom field and the hidden title field.
+        waitForElement('#pods-form-ui-pods-field-play-name, #title', function() {
+            var playNameField = $('#pods-form-ui-pods-field-play-name');
             var originalTitleInput = $('#title');
 
             function updatePlayTitleFromCustomField() {
                 var newTitle = playNameField.val();
                 if (newTitle) {
-                    // This is a direct copy to the hidden native title field.
                     originalTitleInput.val(newTitle);
                 }
             }
             
             if (playNameField.length > 0 && originalTitleInput.length > 0) {
+                console.log("TW PLAYS SUCCESS: 'Play' title fields found and sync is active.");
                 playNameField.on('keyup paste change', updatePlayTitleFromCustomField);
-                // Run once on load to sync any existing data.
                 updatePlayTitleFromCustomField();
-            } else {
-                console.error("TW Plays Error: Could not find the necessary title fields for syncing. Check IDs: #pods-form-ui-pods-field-play-name and #title");
             }
-        }
+        });
+    }
 
         /* ==========================================================================
            SECTION 1: CREW POD LIVE UPDATE
