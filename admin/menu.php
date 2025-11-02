@@ -49,32 +49,28 @@ add_action( 'admin_menu', 'tw_plays_remove_default_pods_menus', 99 );
  * Enqueues the custom CSS and JS for our admin pages.
  */
 function tw_plays_enqueue_admin_assets( $hook_suffix ) {
-    global $pagenow;
+    global $pagenow, $post_type;
 
     // --- 1. Load assets for the custom Dashboard page ---
     if ( 'toplevel_page_tw-plays-dashboard' === $hook_suffix ) {
-        wp_enqueue_style( 'tw-plays-admin-styles', TW_PLAYS_URL . 'admin/assets/css/admin-styles.css', [], '1.1.0' );
+        wp_enqueue_style( 'tw-plays-admin-styles', TW_PLAYS_URL . 'admin/assets/css/admin-styles.css', [], '1.2.0' );
     }
     
     // --- 2. Load assets for the "All Plays" list table page ---
-    // We check for the page name (edit.php) and the post type (play).
-    if ( 'edit.php' === $pagenow && isset( $_GET['post_type'] ) && 'play' === $_GET['post_type'] ) {
-        
-        // Enqueue our new JavaScript file for the interactive toggles.
-        wp_enqueue_script(
-            'tw-plays-list-tables-js',
-            TW_PLAYS_URL . 'admin/assets/js/admin-list-tables.js',
-            [ 'jquery' ], // This script uses jQuery.
-            '1.1.0',
-            true // Load in the footer.
-        );
+    if ( 'edit.php' === $pagenow && 'play' === $post_type ) {
+        wp_enqueue_script( 'tw-plays-list-tables-js', TW_PLAYS_URL . 'admin/assets/js/admin-list-tables.js', [ 'jquery' ], '1.2.0', true );
+        wp_localize_script( 'tw-plays-list-tables-js', 'tw_plays_ajax', [ 'nonce' => wp_create_nonce( 'tw_plays_ajax_nonce' ) ] );
+    }
 
-        // This is the crucial part that passes the security nonce to our JavaScript.
-        wp_localize_script(
-            'tw-plays-list-tables-js',      // The handle of the script to attach data to.
-            'tw_plays_ajax',                // The name of the JavaScript object to create.
-            [ 'nonce' => wp_create_nonce( 'tw_plays_ajax_nonce' ) ] // The data to pass.
-        );
+    // --- 3. NEW: Load assets for all our Pod editor screens (Add New/Edit) ---
+    $pod_slugs = [ 'play', 'actor', 'crew', 'casting_record', 'board_term', 'positions' ]; // Add other pods here
+    if ( ( 'post-new.php' === $pagenow || 'post.php' === $pagenow ) && in_array( $post_type, $pod_slugs ) ) {
+        
+        // Load the main admin stylesheet for consistent styling.
+        wp_enqueue_style( 'tw-plays-admin-styles', TW_PLAYS_URL . 'admin/assets/css/admin-styles.css', [], '1.2.0' );
+        
+        // Load our new editor script.
+        wp_enqueue_script( 'tw-plays-editor-scripts-js', TW_PLAYS_URL . 'admin/assets/js/editor-scripts.js', [ 'jquery' ], '1.2.0', true );
     }
 }
 add_action( 'admin_enqueue_scripts', 'tw_plays_enqueue_admin_assets' );
