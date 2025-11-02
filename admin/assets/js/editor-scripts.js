@@ -1,35 +1,35 @@
-// admin/assets/js/editor-scripts.js
+// admin/assets/js/editor-scripts.js (FINAL UNIFIED VERSION)
 
 jQuery(document).ready(function($) {
 
-    // =========================================================================
-    // NEW FOR 'PLAY' POD: Sync our custom title field with the real one.
-    // This runs immediately because it doesn't depend on the Block Editor.
-    // =========================================================================
-    if ($('body').hasClass('post-type-play')) {
-        
-        var customTitleInput = $('#tw-plays-post-title');
-        var originalTitleInput = $('#title'); // The ID of the original WordPress title input
-
-        // Ensure both fields exist before trying to do anything.
-        if (customTitleInput.length && originalTitleInput.length) {
-            
-            function syncTitles() {
-                originalTitleInput.val(customTitleInput.val());
-            }
-
-            // Sync whenever the user types, pastes, or changes the custom input.
-            customTitleInput.on('keyup paste change', syncTitles);
-            
-            // Run once on page load to handle pre-filled titles when editing an existing play.
-            syncTitles();
-        }
-    }
-
-
-    // A delay for the Block Editor scripts to ensure components are loaded.
-    // This is for all the other pods that still use the block editor.
+    // A delay for all Block Editor related scripts to ensure components are loaded.
     setTimeout(function() {
+
+        /* ==========================================================================
+           NEW: PLAY POD LIVE UPDATE (using custom field)
+           ========================================================================== */
+        if ($('body').hasClass('post-type-play')) {
+            // The ID of your new 'play_name' custom field input
+            var playNameField = $('#pods-form-ui-pods-meta-play-name');
+            // The ID of the original, now hidden, WordPress title field
+            var originalTitleInput = $('#title');
+
+            function updatePlayTitleFromCustomField() {
+                var newTitle = playNameField.val();
+                if (newTitle) {
+                    // This is a direct copy, not using the Block Editor API.
+                    originalTitleInput.val(newTitle);
+                }
+            }
+            
+            if (playNameField.length > 0 && originalTitleInput.length > 0) {
+                playNameField.on('keyup paste change', updatePlayTitleFromCustomField);
+                // Run once on load to sync any existing data
+                updatePlayTitleFromCustomField();
+            } else {
+                console.error("TW Plays Error: Could not find 'play_name' or the original title field for syncing.");
+            }
+        }
 
         /* ==========================================================================
            SECTION 1: CREW POD LIVE UPDATE
