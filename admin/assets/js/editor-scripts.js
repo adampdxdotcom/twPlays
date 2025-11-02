@@ -10,7 +10,7 @@ jQuery(document).ready(function($) {
            ========================================================================== */
         if ($('body').hasClass('post-type-play')) {
             // The ID of your new 'play_name' custom field input
-            var playNameField = $('#pods-form-ui-pods-meta-play-name');
+            var playNameField = $('#pods-form-ui-pods-field-play-name');
             // The ID of the original, now hidden, WordPress title field
             var originalTitleInput = $('#title');
 
