@@ -20,18 +20,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Define constants for easy access to paths and URLs.
- *
- * TW_PLAYS_PATH: The absolute server path to the plugin's root directory.
- * TW_PLAYS_URL: The public URL to the plugin's root directory.
  */
 define( 'TW_PLAYS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'TW_PLAYS_URL', plugin_dir_url( __FILE__ ) );
 
 
 /**
- * The main plugin bootstrap file.
+ * The main setup function for the plugin.
  *
- * This file is responsible for including the main initializer,
- * which in turn loads all other necessary plugin files.
+ * This function is hooked into 'plugins_loaded', which ensures that all other plugins
+ * (like Pods) are loaded and ready before our plugin starts adding its hooks.
  */
-require_once TW_PLAYS_PATH . 'includes/init.php';
+function tw_plays_initialize_plugin() {
+    // Now that we're in a safe loading spot, we can include our initializer file.
+    require_once TW_PLAYS_PATH . 'includes/init.php';
+}
+// This is the key: we run our setup function at the correct time.
+add_action( 'plugins_loaded', 'tw_plays_initialize_plugin' );
