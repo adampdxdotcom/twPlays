@@ -2,8 +2,8 @@
 /**
  * Custom List Table Columns for the 'Play' Pod.
  *
- * This file adds custom columns to the "All Plays" admin screen and renders their content.
- * It also sets up the necessary HTML structure for the AJAX toggle functionality.
+ * This file adds custom columns to the "All Plays" admin screen, renders their content,
+ * and handles the AJAX endpoint for the interactive toggle switches.
  *
  * @package TW_Plays
  */
@@ -17,21 +17,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 1. Add custom columns to the 'play' post type list table.
  */
 function tw_plays_add_play_columns( $columns ) {
-    // Create a new array to reorder columns and insert our own.
     $new_columns = [];
-
     foreach ( $columns as $key => $title ) {
-        // Add original columns up to the 'title' column.
         $new_columns[ $key ] = $title;
         if ( 'title' === $key ) {
-            // Add our custom columns right after the title.
             $new_columns['play_poster']        = 'Poster';
             $new_columns['play_audition_status'] = 'Auditions Open';
             $new_columns['play_current_show']  = 'Current Show';
             $new_columns['play_featured']      = 'Featured';
         }
     }
-
     return $new_columns;
 }
 add_filter( 'manage_play_posts_columns', 'tw_plays_add_play_columns' );
@@ -41,39 +36,27 @@ add_filter( 'manage_play_posts_columns', 'tw_plays_add_play_columns' );
  * 2. Render the content for our custom columns.
  */
 function tw_plays_render_play_columns( $column_name, $post_id ) {
-    
-    // Use a switch statement to handle our different custom columns.
     switch ( $column_name ) {
-
         case 'play_poster':
             $poster_data = pods( 'play', $post_id )->field( 'poster' );
             if ( ! empty( $poster_data['guid'] ) ) {
-                // Get the thumbnail URL for efficiency.
                 $thumbnail_url = wp_get_attachment_image_url( $poster_data['ID'], 'thumbnail' );
                 echo '<img src="' . esc_url( $thumbnail_url ) . '" width="100" alt="Play Poster" style="max-width: 100px; height: auto;"/>';
             } else {
-                echo '&mdash;'; // Output an em-dash if no poster is set.
+                echo '&mdash;';
             }
             break;
 
-        // The next three cases all handle our yes/no toggle fields.
         case 'play_audition_status':
         case 'play_current_show':
         case 'play_featured':
-            // Extract the field name from the column name (e.g., 'play_featured' -> 'featured').
             $field_name = str_replace( 'play_', '', $column_name );
-            
-            // Get the current value from the Pods field (1 for 'yes', 0 for 'no').
             $current_value = (int) pods( 'play', $post_id )->field( $field_name );
-            
-            // Determine which icon and status text to show.
             $is_active      = ( 1 === $current_value );
             $icon_class     = $is_active ? 'yes-alt' : 'dismiss';
             $status_text    = $is_active ? 'Yes' : 'No';
-            $color          = $is_active ? 'green' : '#a0a5aa'; // WordPress grey
+            $color          = $is_active ? 'green' : '#a0a5aa';
             
-            // This is the setup for our future AJAX toggle.
-            // We output a clickable link with all the data our JavaScript will need.
             printf(
                 '<a href="#" class="tw-plays-toggle" data-post-id="%d" data-field="%s" data-current-status="%d" title="Click to toggle">
                     <span class="dashicons dashicons-%s" style="color: %s; font-size: 24px;"></span>
@@ -90,3 +73,53 @@ function tw_plays_render_play_columns( $column_name, $post_id ) {
     }
 }
 add_action( 'manage_play_posts_custom_column', 'tw_plays_render_play_columns', 10, 2 );
+
+
+// =========================================================================
+// == NEW: AJAX Functionality for the Toggle Switches
+// =========================================================================
+
+/**
+ * 3. The server-side function that handles the AJAX request from our JavaScript.
+ */
+function tw_plays_handle_status_update() {
+    // 1. Security Check: Verify the nonce.
+    if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'tw_plays_ajax_nonce' ) ) {
+        wp_send_json_error( [ 'message' => 'Nonce verification failed.' ] );
+        return;
+    }
+
+    // 2. Security Check: Ensure the current user has permission to edit posts.
+    if ( ! current_user_can( 'edit_posts' ) ) {
+        wp_send_json_error( [ 'message' => 'You do not have permission to perform this action.' ] );
+        return;
+    }
+
+    // 3. Sanitize and validate the incoming data.
+    $post_id = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
+    $field   = isset( $_POST['field'] ) ? sanitize_key( $_POST['field'] ) : '';
+    $status  = isset( $_POST['new_status'] ) ? intval( $_POST['new_status'] ) : 0;
+
+    // A list of fields that are allowed to be updated via this AJAX call.
+    $allowed_fields = [ 'audition_status', 'current_show', 'featured' ];
+
+    if ( ! $post_id || empty( $field ) || ! in_array( $field, $allowed_fields, true ) ) {
+        wp_send_json_error( [ 'message' => 'Invalid data provided.' ] );
+        return;
+    }
+
+    // 4. Perform the update using the Pods API.
+    try {
+        $pod = pods( 'play', $post_id );
+        $pod->save( $field, $status );
+        
+        // If the save was successful, send a success response.
+        wp_send_json_success();
+
+    } catch ( Exception $e ) {
+        // If there was an error saving, send an error response.
+        wp_send_json_error( [ 'message' => 'Failed to save data: ' . $e->getMessage() ] );
+    }
+}
+// Hook our function into WordPress's AJAX system for logged-in users.
+add_action( 'wp_ajax_tw_plays_update_status', 'tw_plays_handle_status_update' );
