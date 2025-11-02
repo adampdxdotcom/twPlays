@@ -11,7 +11,7 @@ jQuery(document).ready(function($) {
            CORRECTED: PLAY POD LIVE UPDATE
            ========================================================================== */
     if ($('body').hasClass('post-type-play')) {
-        // We need to wait for BOTH the custom field and the hidden title field.
+        // Wait for both fields to exist before running the sync logic.
         waitForElement('#pods-form-ui-pods-field-play-name, #title', function() {
             var playNameField = $('#pods-form-ui-pods-field-play-name');
             var originalTitleInput = $('#title');
