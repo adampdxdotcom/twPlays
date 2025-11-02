@@ -1,16 +1,15 @@
 <?php
 /**
- * Customizations for the 'Play' Pod Editor Screen. (FINAL - CUSTOM TITLE FIELD)
+ * Customizations for the 'Play' Pod Editor Screen. (FINAL - HEADER FIX)
  *
- * This version hides the entire default Block Editor interface and creates its
- * own custom title field. This provides full control over the layout, guarantees
- * the removal of white space, and creates a clean data-entry UI.
+ * This version restores the editor's top header, bringing back the "Save" button
+ * and the "Back" link, while still hiding the main content area to remove the white space.
  *
  * @package TW_Plays
  */
 
 // If this file is called directly, abort.
-if ( ! defined( 'ABSPATH' ) ) {
+if ( ! defined( 'ABSPath' ) ) {
 	exit;
 }
 
@@ -22,40 +21,19 @@ add_action( 'init', 'tw_plays_modify_play_editor_support_final' );
 
 // 2. Add our custom meta boxes.
 function tw_plays_add_all_custom_meta_boxes() {
-    // Box 1: Our custom title field, placed at the very top.
-    add_meta_box(
-        'tw_plays_custom_title_box',
-        'Play Title', // This title is hidden by CSS
-        'tw_plays_render_custom_title_box',
-        'play',
-        'advanced',
-        'high'
-    );
-    // Box 2: Our reliable Pods fields box.
-    add_meta_box(
-        'tw_plays_custom_fields_box',
-        'Play Details',
-        'tw_plays_render_custom_meta_box_final',
-        'play',
-        'advanced',
-        'high'
-    );
+    add_meta_box( 'tw_plays_custom_title_box', 'Play Title', 'tw_plays_render_custom_title_box', 'play', 'advanced', 'high' );
+    add_meta_box( 'tw_plays_custom_fields_box', 'Play Details', 'tw_plays_render_custom_meta_box_final', 'play', 'advanced', 'high' );
 }
 add_action( 'add_meta_boxes', 'tw_plays_add_all_custom_meta_boxes' );
 
-/**
- * 3. Render the content of our custom title box.
- * This is just a large input field styled to look like the default title.
- */
+// 3. Render the custom title box.
 function tw_plays_render_custom_title_box( $post ) {
     echo '<div class="tw-plays-custom-title-container">';
     echo '<input type="text" name="tw_plays_custom_title_input" id="tw-plays-custom-title-input" value="' . esc_attr( $post->post_title ) . '" placeholder="Play Name Here" autocomplete="off" />';
     echo '</div>';
 }
 
-/**
- * 4. Render the content of our Pods meta box.
- */
+// 4. Render the Pods meta box.
 function tw_plays_render_custom_meta_box_final( $post ) {
     if ( function_exists( 'pods' ) ) {
         $pod = pods( 'play', $post->ID );
@@ -63,30 +41,26 @@ function tw_plays_render_custom_meta_box_final( $post ) {
     }
 }
 
-// 5. Inject CSS to completely hide the default editor and style our new title field.
+// 5. Inject CSS to hide the editor content area and style our new title field.
 function tw_plays_hide_block_editor_and_style_title() {
     $current_screen = get_current_screen();
     if ( $current_screen && 'play' === $current_screen->post_type ) {
         echo '
         <style>
-		    #pods-meta-more-fields {
-                display: none !important;
-            }
-            /* Hide the entire Block Editor main area */
-            #editor .edit-post-visual-editor,
-            /* Hide the top bar with the block tools */
-            .edit-post-header {
-                display: none !important;
-            }
+            /* Hide the default Pods meta box to prevent duplication */
+            #pods-meta-more-fields { display: none !important; }
+
+            /* Hide the main Block Editor visual area (the white space) */
+            #editor .edit-post-visual-editor { display: none !important; }
+
+            /* --- THE FIX: We NO LONGER hide the .edit-post-header --- */
 
             /* --- Style Our Custom Title Field --- */
-            /* Hide the meta box chrome (title, border) around our custom title */
             #tw_plays_custom_title_box .hndle,
             #tw_plays_custom_title_box .handle-actions { display: none; }
             #tw_plays_custom_title_box .inside { margin: 0; padding: 0; }
             #tw_plays_custom_title_box { border: none; background: transparent; }
 
-            /* Style the input itself to look like the real title */
             #tw-plays-custom-title-input {
                 width: 100%;
                 border: none;
