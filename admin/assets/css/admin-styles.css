@@ -118,3 +118,17 @@
     display: block;
     margin-bottom: 5px;
 }
+
+/* Make the main meta box title bigger and more prominent */
+.post-type-play #tw_plays_custom_fields_box h2.hndle {
+    font-size: 1.5em;
+    padding: 15px 20px;
+}
+
+/* Style for the uploaded poster image preview */
+.post-type-play #tw_plays_custom_fields_box .pods-form-ui-field-type-file .pods-form-ui-image-preview img {
+    max-height: 250px; /* Make the poster preview much larger */
+    width: auto;
+    border: 1px solid #ddd;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
