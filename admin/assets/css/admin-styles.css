@@ -132,3 +132,24 @@
     border: 1px solid #ddd;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
+/* Container for our custom title field */
+.tw-plays-editor-field {
+    margin-bottom: 20px;
+}
+
+/* Label for our custom title field */
+.tw-plays-editor-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* The title input field itself, styled to look like the default one */
+.tw-plays-editor-title-input {
+    width: 100%;
+    font-size: 1.7em;
+    line-height: 1.5;
+    padding: 8px;
+    box-sizing: border-box;
+}
