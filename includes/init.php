@@ -1,12 +1,11 @@
 <?php
 /**
- * Plugin Initializer (BARE MINIMUM TEST MODE)
+ * Plugin Initializer (DEBUGGING - Step 1)
  */
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-// If this file is called directly, abort.
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
-
-// We are only loading menu.php for this test.
+// Load the menu file (we know this works)
 require_once TW_PLAYS_PATH . 'admin/menu.php';
+
+// ADDING THIS FILE BACK
+require_once TW_PLAYS_PATH . 'admin/dashboard-page.php';
