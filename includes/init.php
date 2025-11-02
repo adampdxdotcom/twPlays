@@ -1,9 +1,6 @@
 <?php
 /**
- * Plugin Initializer
- *
- * This file is responsible for loading all the necessary PHP files (components)
- * that make up the plugin's functionality.
+ * Plugin Initializer (DEBUGGING MODE)
  *
  * @package TW_Plays
  */
@@ -26,5 +23,8 @@ require_once TW_PLAYS_PATH . 'admin/dashboard-page.php';
 // Loads the custom columns and AJAX functionality for the Play list table.
 require_once TW_PLAYS_PATH . 'admin/list-tables/play-columns.php';
 
-// Loads the customizations for the Play editor screen.
-require_once TW_PLAYS_PATH . 'admin/list-tables/play-editor.php';
+// --- WE ARE COMMENTING OUT THE PLAY EDITOR FOR THIS TEST ---
+// require_once TW_PLAYS_PATH . 'admin/list-tables/play-editor.php';
+
+// --- WE ARE LOADING ONLY THE ACTOR TEST FILE ---
+require_once TW_PLAYS_PATH . 'admin/list-tables/actor-editor-test.php';
