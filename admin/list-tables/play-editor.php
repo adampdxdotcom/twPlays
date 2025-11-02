@@ -9,7 +9,7 @@
  */
 
 // If this file is called directly, abort.
-if ( ! defined( 'ABSPath' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
