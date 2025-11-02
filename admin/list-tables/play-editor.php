@@ -1,10 +1,10 @@
 <?php
 /**
- * Customizations for the 'Play' Pod Editor Screen. (SIMPLIFIED VERSION)
+ * Customizations for the 'Play' Pod Editor Screen. (FINAL & ROBUST VERSION)
  *
- * This version removes the custom meta box and relies on the native Pods meta box.
- * It keeps the Block Editor enabled in a minimal state (title only) and enqueues
- * assets for title-syncing functionality.
+ * This version uses the modern Block Editor but creates its own custom meta box.
+ * This explicit approach guarantees that Pods loads the correct data for the post
+ * being edited, solving the "blank fields on edit" issue.
  *
  * @package TW_Plays
  */
@@ -16,31 +16,58 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // 1. Ensure the Block Editor is enabled for the 'play' post type.
 function tw_plays_modify_play_editor_support_final() {
-    // This ensures the modern editor loads, making it consistent with other post types.
     add_post_type_support( 'play', 'title' );
 }
 add_action( 'init', 'tw_plays_modify_play_editor_support_final' );
 
+// 2. Add our own custom meta box again. This gives us control over data loading.
+function tw_plays_add_custom_meta_box_final() {
+    add_meta_box(
+        'tw_plays_custom_fields_box',          // Unique ID
+        'Play Details',                        // Box title
+        'tw_plays_render_custom_meta_box_final', // Content callback function
+        'play',                                // Post type
+        'advanced',                            // Context
+        'high'                                 // Priority
+    );
+}
+add_action( 'add_meta_boxes', 'tw_plays_add_custom_meta_box_final' );
 
-// 2. We have removed the 'add_meta_box' and its render callback function.
-//    The native Pods meta box ("More Fields") will now be used instead.
+/**
+ * 3. Render the content of our custom meta box.
+ *    CRUCIAL: We explicitly initialize Pods with the current post's ID.
+ *    This guarantees the form fields will be populated with saved data.
+ */
+function tw_plays_render_custom_meta_box_final( $post ) {
+    if ( function_exists( 'pods' ) ) {
+        // Initialize the Pods object for the 'play' pod using the current post ID.
+        $pod = pods( 'play', $post->ID );
+        
+        // Render the form, which will now be correctly populated.
+        echo $pod->form();
+    }
+}
 
-
-// 3. Hide the main writing area of the Block Editor using CSS.
+// 4. Hide unnecessary elements using CSS.
 function tw_plays_hide_original_elements_css_final() {
     global $post_type;
     if ( 'play' === $post_type ) {
-        // Hides the "Type / to choose a block" area, leaving a clean interface.
-        echo '<style>.block-editor-writing-flow { display: none !important; }</style>';
+        // Rule 1: Hides the main block writing area ("Type / to choose a block").
+        // Rule 2: Hides the native (and blank) "More Fields" Pods box to prevent duplication.
+        echo '<style>
+            .block-editor-writing-flow,
+            #pods-meta-more-fields {
+                display: none !important;
+            }
+        </style>';
     }
 }
 add_action( 'admin_head-post.php', 'tw_plays_hide_original_elements_css_final' );
 add_action( 'admin_head-post-new.php', 'tw_plays_hide_original_elements_css_final' );
 
-// 4. Enqueue assets for title-syncing and styling.
+// 5. Enqueue assets for title-syncing and styling. (No changes needed here)
 function tw_plays_enqueue_play_editor_assets_final( $hook_suffix ) {
     global $post_type;
-    // This list correctly targets all relevant post types.
     $pod_slugs = [ 'play', 'actor', 'crew', 'casting_record', 'board_term', 'positions' ];
     if ( ( 'post-new.php' === $hook_suffix || 'post.php' === $hook_suffix ) && in_array( $post_type, $pod_slugs ) ) {
         wp_enqueue_style( 'tw-plays-admin-styles', TW_PLAYS_URL . 'admin/assets/css/admin-styles.css', [], '1.5.0' );
