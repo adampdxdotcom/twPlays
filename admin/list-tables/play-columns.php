@@ -1,9 +1,9 @@
 <?php
 /**
- * Custom List Table Columns for the 'Play' Pod.
+ * Custom List Table Columns for the 'Play' Pod. (v2)
  *
  * This file adds custom columns to the "All Plays" admin screen, renders their content,
- * and handles the AJAX endpoint for the interactive toggle switches.
+ * handles the AJAX endpoint for the interactive toggle switches, and adds custom row coloring.
  *
  * @package TW_Plays
  */
@@ -14,34 +14,58 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * 1. Add custom columns to the 'play' post type list table.
+ * 1. REORDER & ADD Columns: Set the desired column order from scratch.
  */
-function tw_plays_add_play_columns( $columns ) {
-    $new_columns = [];
-    foreach ( $columns as $key => $title ) {
-        $new_columns[ $key ] = $title;
-        if ( 'title' === $key ) {
-            $new_columns['play_poster']        = 'Poster';
-            $new_columns['play_audition_status'] = 'Auditions Open';
-            $new_columns['play_current_show']  = 'Current Show';
-            $new_columns['play_featured']      = 'Featured';
-        }
-    }
+function tw_plays_set_play_columns( $columns ) {
+    // We start fresh with a checkbox column, as is standard.
+    $new_columns = [
+        'cb' => $columns['cb'],
+    ];
+
+    // Add our custom columns first.
+    $new_columns['play_poster']        = 'Poster';
+    $new_columns['title']              = 'Title'; // The original title column
+    $new_columns['play_audition_status'] = 'Auditions Open';
+    $new_columns['play_current_show']  = 'Current Show';
+    $new_columns['play_featured']      = 'Featured';
+
+    // Add back any other default columns we want to keep.
+    $new_columns['date'] = 'Date';
+    
+    // Example for future: If you use a 'Views' plugin, you could re-add its column here.
+    // if ( isset( $columns['views'] ) ) {
+    //     $new_columns['views'] = 'Views';
+    // }
+
     return $new_columns;
 }
-add_filter( 'manage_play_posts_columns', 'tw_plays_add_play_columns' );
+add_filter( 'manage_play_posts_columns', 'tw_plays_set_play_columns' );
 
 
 /**
- * 2. Render the content for our custom columns.
+ * 2. DESIGNATE PRIMARY COLUMN: Tell WordPress to put the 'Edit | Quick Edit' links under the 'title' column.
+ */
+function tw_plays_set_primary_column( $default, $screen_id ) {
+    if ( 'edit-play' === $screen_id ) {
+        return 'title';
+    }
+    return $default;
+}
+add_filter( 'list_table_primary_column', 'tw_plays_set_primary_column', 10, 2 );
+
+
+/**
+ * 3. RENDER CONTENT for our custom columns.
  */
 function tw_plays_render_play_columns( $column_name, $post_id ) {
     switch ( $column_name ) {
         case 'play_poster':
             $poster_data = pods( 'play', $post_id )->field( 'poster' );
             if ( ! empty( $poster_data['guid'] ) ) {
-                $thumbnail_url = wp_get_attachment_image_url( $poster_data['ID'], 'thumbnail' );
-                echo '<img src="' . esc_url( $thumbnail_url ) . '" width="100" alt="Play Poster" style="max-width: 100px; height: auto;"/>';
+                // Get the URL for the full-sized image.
+                $image_url = wp_get_attachment_image_url( $poster_data['ID'], 'full' );
+                // Constrain height to 150px and let width adjust automatically.
+                echo '<img src="' . esc_url( $image_url ) . '" alt="Play Poster" style="height: 150px; width: auto; max-width: 150px;"/>';
             } else {
                 echo '&mdash;';
             }
@@ -62,12 +86,8 @@ function tw_plays_render_play_columns( $column_name, $post_id ) {
                     <span class="dashicons dashicons-%s" style="color: %s; font-size: 24px;"></span>
                     <span class="screen-reader-text">%s</span>
                 </a>',
-                esc_attr( $post_id ),
-                esc_attr( $field_name ),
-                esc_attr( $current_value ),
-                esc_attr( $icon_class ),
-                esc_attr( $color ),
-                esc_html( $status_text )
+                esc_attr( $post_id ), esc_attr( $field_name ), esc_attr( $current_value ),
+                esc_attr( $icon_class ), esc_attr( $color ), esc_html( $status_text )
             );
             break;
     }
@@ -75,51 +95,61 @@ function tw_plays_render_play_columns( $column_name, $post_id ) {
 add_action( 'manage_play_posts_custom_column', 'tw_plays_render_play_columns', 10, 2 );
 
 
-// =========================================================================
-// == NEW: AJAX Functionality for the Toggle Switches
-// =========================================================================
-
 /**
- * 3. The server-side function that handles the AJAX request from our JavaScript.
+ * 4. ADD COLOR DATA to the row's HTML for JavaScript to use.
  */
+function tw_plays_add_row_color_attributes( $classes, $post_id ) {
+    // Only apply this logic to the 'play' post type.
+    if ( 'play' === get_post_type( $post_id ) ) {
+        $pod = pods( 'play', $post_id );
+        $bg_color = $pod->field( 'calendar_color' );
+        $text_color = $pod->field( 'calendar_color_text' );
+
+        // If the colors exist, add them as data attributes.
+        if ( ! empty( $bg_color ) ) {
+            $classes[] = 'has-custom-bg-color'; // A helper class for our JS.
+            $classes[] = 'data-bg-color="' . esc_attr( $bg_color ) . '"';
+        }
+        if ( ! empty( $text_color ) ) {
+            $classes[] = 'data-text-color="' . esc_attr( $text_color ) . '"';
+        }
+    }
+    return $classes;
+}
+// This is a bit of a hack, but it's the most reliable way to inject data attributes into the <tr> tag.
+// We add them as "classes" and our JS will parse them.
+add_filter( 'post_class', 'tw_plays_add_row_color_attributes', 10, 2 );
+
+
+
+// =========================================================================
+// == AJAX Functionality for the Toggle Switches (No changes needed here)
+// =========================================================================
 function tw_plays_handle_status_update() {
-    // 1. Security Check: Verify the nonce.
+    // Security checks...
     if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'tw_plays_ajax_nonce' ) ) {
-        wp_send_json_error( [ 'message' => 'Nonce verification failed.' ] );
-        return;
+        wp_send_json_error( [ 'message' => 'Nonce verification failed.' ] ); return;
     }
-
-    // 2. Security Check: Ensure the current user has permission to edit posts.
     if ( ! current_user_can( 'edit_posts' ) ) {
-        wp_send_json_error( [ 'message' => 'You do not have permission to perform this action.' ] );
-        return;
+        wp_send_json_error( [ 'message' => 'You do not have permission.' ] ); return;
     }
 
-    // 3. Sanitize and validate the incoming data.
+    // Sanitize and validate data...
     $post_id = isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0;
     $field   = isset( $_POST['field'] ) ? sanitize_key( $_POST['field'] ) : '';
     $status  = isset( $_POST['new_status'] ) ? intval( $_POST['new_status'] ) : 0;
-
-    // A list of fields that are allowed to be updated via this AJAX call.
     $allowed_fields = [ 'audition_status', 'current_show', 'featured' ];
-
     if ( ! $post_id || empty( $field ) || ! in_array( $field, $allowed_fields, true ) ) {
-        wp_send_json_error( [ 'message' => 'Invalid data provided.' ] );
-        return;
+        wp_send_json_error( [ 'message' => 'Invalid data provided.' ] ); return;
     }
 
-    // 4. Perform the update using the Pods API.
+    // Perform the update...
     try {
         $pod = pods( 'play', $post_id );
         $pod->save( $field, $status );
-        
-        // If the save was successful, send a success response.
         wp_send_json_success();
-
     } catch ( Exception $e ) {
-        // If there was an error saving, send an error response.
         wp_send_json_error( [ 'message' => 'Failed to save data: ' . $e->getMessage() ] );
     }
 }
-// Hook our function into WordPress's AJAX system for logged-in users.
 add_action( 'wp_ajax_tw_plays_update_status', 'tw_plays_handle_status_update' );
