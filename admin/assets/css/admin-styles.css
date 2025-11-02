@@ -81,3 +81,44 @@
     padding: 8px 16px;
     height: auto;
 }
+
+/* ===================================================================
+   Styles for the Custom 'Play Details' Editor Meta Box
+   =================================================================== */
+
+/* Target the container for our new meta box */
+#tw_plays_custom_fields_box .inside {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Add space between each field */
+}
+
+/* Style each individual field row */
+#tw_plays_custom_fields_box .pods-field {
+    padding: 0;
+    margin: 0;
+}
+
+/* Style for the field labels (e.g., "Audition Status") */
+#tw_plays_custom_fields_box .pods-form-ui-label {
+    display: block;
+    padding: 0;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* Style for text input fields */
+#tw_plays_custom_fields_box .pods-form-ui-field-input input[type="text"],
+#tw_plays_custom_fields_box .pods-form-ui-field-input textarea {
+    width: 100%;
+    max-width: 600px; /* Prevent text fields from becoming too wide */
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+/* Style for checkbox labels to align them nicely */
+#tw_plays_custom_fields_box .pods-form-ui-field-type-boolean label {
+    display: block;
+    margin-bottom: 5px;
+}
