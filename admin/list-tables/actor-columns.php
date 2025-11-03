@@ -1,10 +1,10 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v3.1 - RESILIENT VERSION)
+ * Custom List Table Columns for the 'Actor' Pod. (v3.2 - BULLETPROOF VERSION)
  *
- * This version adds crucial "sanity checks" to prevent fatal errors when a
- * casting or crew record is missing a link to its play. This makes the code
- * resilient to "bad data" and resolves the fatal error.
+ * This version adds stronger validation to prevent fatal errors when relationship
+ * fields (like the link to a play) are empty or corrupted in the database.
+ * This resolves the "Call to a member function field() on false" error permanently.
  *
  * @package TW_Plays
  */
@@ -58,25 +58,16 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
         case 'actor_current_activity':
             $activity_lines = [];
 
-            // --- Query 1 & 2: Cast & Crew (with sanity checks) ---
+            // --- Query 1 & 2: Cast & Crew (with stronger sanity checks) ---
             $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $post_id ] ] );
             foreach ( $casting_records as $record ) {
-                // --- THE FIX IS HERE (Part 1) ---
-                // First, get the play ID from the record.
+                // --- STRONGER FIX (Part 1) ---
                 $play_id = $record->field( 'play.ID' );
-                // If there's no play ID, skip this record entirely.
-                if ( empty( $play_id ) ) {
-                    continue;
-                }
-                // Now, safely load the play pod.
+                if ( ! is_numeric( $play_id ) || $play_id <= 0 ) { continue; } // Ensures we have a valid post ID.
                 $play_pod = pods( 'play', $play_id );
-                // If the pod object couldn't be created or doesn't exist, skip.
-                if ( ! $play_pod->exists() ) {
-                    continue;
-                }
+                if ( ! $play_pod || ! $play_pod->exists() ) { continue; }
                 // --- END FIX ---
 
-                // Now it's safe to check the fields.
                 if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
                     $play_title = $play_pod->field('post_title');
                     $character  = $record->field('character_name');
@@ -86,11 +77,11 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
 
             $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $post_id ] ] );
             foreach ( $crew_records as $record ) {
-                // --- THE FIX IS HERE (Part 2) ---
+                // --- STRONGER FIX (Part 2) ---
                 $play_id = $record->field( 'play.ID' );
-                if ( empty( $play_id ) ) { continue; }
+                if ( ! is_numeric( $play_id ) || $play_id <= 0 ) { continue; } // This is the line that will fix the crash.
                 $play_pod = pods( 'play', $play_id );
-                if ( ! $play_pod->exists() ) { continue; }
+                if ( ! $play_pod || ! $play_pod->exists() ) { continue; }
                 // --- END FIX ---
 
                 if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
@@ -100,7 +91,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
             
-            // --- Query 3: Board Position (this method is already working) ---
+            // --- Query 3: Board Position (this method is already bulletproof) ---
             $board_terms = pods( 'board_term', [
                 'limit' => 1,
                 'where' => [
@@ -111,10 +102,12 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
             ]);
             if ( $board_terms->total() > 0 ) {
                 $board_terms->fetch();
-                if ( 1 == $board_terms->field( 'board_position.is_board' ) ) {
-                    $position_title = $board_terms->field( 'board_position.post_title' );
-                    if ( ! empty( $position_title ) ) {
-                         $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html( $position_title );
+                $position_id = $board_terms->field('board_position.ID');
+                if ( is_numeric($position_id) && $position_id > 0 ) {
+                    $position_pod = pods('positions', $position_id);
+                    if ($position_pod && $position_pod->exists() && $position_pod->field('is_board') == 1) {
+                        $position_title = $position_pod->field('post_title');
+                        $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html($position_title);
                     }
                 }
             }
