@@ -196,7 +196,7 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr); /* Two equal-width columns */
     gap: 20px;
-    margin-top: 30px;
+    margin-top: 30px; /* NEW: Add space above the entire section */
 }
 
 /* Base styles for a single play card */
@@ -208,7 +208,8 @@
 
 /* The title inside the card (e.g., "Now Playing") */
 .tw-plays-dashboard .play-card h3 {
-    font-size: 1.1em;
+    font-size: 1.3em;  /* MODIFIED: Increased font size */
+    font-weight: 600;  /* MODIFIED: Made font semi-bold */
     padding: 15px 20px;
     margin: 0;
     border-bottom: 1px solid #eee;
@@ -219,14 +220,14 @@
 /* Use Flexbox for the poster + details layout */
 .tw-plays-dashboard .play-card-content {
     display: flex;
-    align-items: flex-start; /* Aligns items to the top */
+    align-items: flex-start;
     gap: 20px;
     padding: 20px;
 }
 
 .tw-plays-dashboard .play-card-poster {
-    flex-basis: 150px; /* Give the poster a fixed base width */
-    flex-shrink: 0;    /* Prevent the poster from shrinking */
+    flex-basis: 150px;
+    flex-shrink: 0;
 }
 
 .tw-plays-dashboard .play-card-poster img {
@@ -238,7 +239,7 @@
 }
 
 .tw-plays-dashboard .play-card-details {
-    flex-grow: 1; /* Allow the details to fill the remaining space */
+    flex-grow: 1;
 }
 
 /* The title of the play */
@@ -267,7 +268,6 @@
 
 /* --- Styles for a card WITHOUT a play --- */
 
-/* Add a dashed border to indicate an empty state */
 .tw-plays-dashboard .play-card.is-empty {
     border-style: dashed;
 }
