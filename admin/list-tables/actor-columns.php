@@ -1,10 +1,9 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v4.0 - FINAL WORKING VERSION)
+ * Custom List Table Columns for the 'Actor' Pod. (v4.1 - FATAL ERROR FIX)
  *
- * This version uses the definitive, crash-proof loop structure and the correct
- * Pods ->field() method to access all related custom field data. This is the
- * final, stable version that displays all current activity for an actor.
+ * This version corrects a fatal PHP error caused by a typo in a function
+ * definition. The core logic for querying and displaying data remains the same.
  *
  * @package TW_Plays
  */
@@ -41,8 +40,8 @@ add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
 /**
  * 3. DESIGNATE PRIMARY COLUMN: Unchanged.
  */
-function tw_plays_set_actor_primary_column( $default, 'actor_columns' ) {
-    if ( 'edit-actor' === 'actor_columns' ) {
+function tw_plays_set_actor_primary_column( $default, $screen_id ) { // CORRECTED a fatal typo here.
+    if ( 'edit-actor' === $screen_id ) { // CORRECTED a fatal typo here.
         return 'title';
     }
     return $default;
