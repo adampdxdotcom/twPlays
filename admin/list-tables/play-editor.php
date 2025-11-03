@@ -29,6 +29,7 @@ function tw_plays_render_custom_title_field_high( $post ) {
         return;
     }
     echo '<div class="tw-plays-custom-title-container">';
+    echo '<label for="tw-plays-custom-title-input" class="tw-plays-title-label">Title</label>';
     echo '<input type="text" name="tw_plays_custom_title_input" id="tw-plays-custom-title-input" value="' . esc_attr( $post->post_title ) . '" placeholder="Play Name Here" autocomplete="off" />';
     echo '</div>';
 }
