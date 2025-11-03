@@ -1,9 +1,9 @@
 <?php
 /**
- * Custom Dashboard Page (v2 with Featured Plays)
+ * Custom Dashboard Page (v2.1 with Corrected Counts)
  *
- * Renders the content for the main "TW Plays" dashboard page, now including
- * featured sections for the "Now Playing" and "Next Up" productions.
+ * This version corrects the queries for counting actors and crew members to ensure
+ * the numbers are displayed correctly on the dashboard.
  *
  * @package TW_Plays
  */
@@ -15,10 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * A helper function to render a featured play card on the dashboard.
- * This keeps our code clean and avoids repetition.
- *
- * @param object $play_pod A Pods object for the play to display.
- * @param string $title The title for the section (e.g., "Now Playing").
  */
 function tw_plays_render_dashboard_play_card( $play_pod, $title ) {
     ?>
@@ -26,21 +22,20 @@ function tw_plays_render_dashboard_play_card( $play_pod, $title ) {
         <h3><?php echo esc_html( $title ); ?></h3>
         <?php if ( $play_pod->total() > 0 ) : ?>
             <?php
-                $play_pod->fetch(); // Load the first (and only) result.
+                $play_pod->fetch();
                 $play_id = $play_pod->id();
                 
-                // Get the poster.
                 $poster_data = $play_pod->field('poster');
                 $image_url = ! empty( $poster_data['guid'] ) ? wp_get_attachment_image_url( $poster_data['ID'], 'medium' ) : '';
 
-                // Get dates (assuming field names 'start_date' and 'end_date').
                 $start_date = $play_pod->field('start_date');
                 $end_date   = $play_pod->field('end_date');
                 $date_range = ( ! empty( $start_date ) && ! empty( $end_date ) ) ? date( 'M j', strtotime( $start_date ) ) . ' - ' . date( 'M j, Y', strtotime( $end_date ) ) : 'Dates not set';
 
-                // Get cast and crew counts.
-                $actor_count = pods( 'casting_record' )->count( [ 'where' => 'play.ID = ' . $play_id ] );
-                $crew_count  = pods( 'crew' )->count( [ 'where' => 'play.ID = ' . $play_id ] );
+                // --- THE FIX IS HERE ---
+                // We use the reliable find()->total() method to get the counts.
+                $actor_count = pods( 'casting_record' )->find( [ 'where' => 'play.ID = ' . $play_id ] )->total();
+                $crew_count  = pods( 'crew' )->find( [ 'where' => 'play.ID = ' . $play_id ] )->total();
             ?>
             <div class="play-card-content">
                 <?php if ( $image_url ) : ?>
@@ -59,7 +54,7 @@ function tw_plays_render_dashboard_play_card( $play_pod, $title ) {
             </div>
         <?php else : ?>
             <div class="play-card-empty">
-                <p>No play is currently set as "<?php echo esc_html( $title ); ?>".</p>
+                <p>No play is currently set as "<?php echo esc_html( str_replace( 'Next', 'Auditioning for', $title ) ); ?>".</p>
                 <a href="<?php echo esc_url( admin_url('edit.php?post_type=play') ); ?>" class="button button-secondary">Select a Play</a>
             </div>
         <?php endif; ?>
@@ -77,10 +72,8 @@ function tw_plays_render_dashboard_page() {
         wp_die( __( 'You do not have sufficient permissions to access this page.', 'tw-plays' ) );
     }
 
-    // --- NEW: Find our featured plays ---
-    // Find the play marked as 'current_show'.
+    // Find our featured plays.
     $now_playing_pod = pods( 'play' )->find( [ 'limit' => 1, 'where' => 'current_show.meta_value = 1' ] );
-    // Find the play marked as 'audition_status'.
     $next_up_pod = pods( 'play' )->find( [ 'limit' => 1, 'where' => 'audition_status.meta_value = 1' ] );
 
     $pods_to_display = [
@@ -97,7 +90,7 @@ function tw_plays_render_dashboard_page() {
         <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
         <p class="description">Welcome to the Theatre West management dashboard. Here you can see a summary of your site's data and quickly add new content.</p>
         
-        <!-- NEW Section: Featured Plays -->
+        <!-- Featured Plays Section -->
         <div class="dashboard-section featured-plays">
             <?php 
                 tw_plays_render_dashboard_play_card( $now_playing_pod, 'Now Playing' );
@@ -106,7 +99,7 @@ function tw_plays_render_dashboard_page() {
         </div>
 
 
-        <!-- Section 1: At a Glance Statistics (Unchanged) -->
+        <!-- At a Glance Statistics (Unchanged) -->
         <div class="dashboard-section">
             <h2>At a Glance</h2>
             <div class="stats-container">
@@ -125,7 +118,7 @@ function tw_plays_render_dashboard_page() {
             </div>
         </div>
 
-        <!-- Section 2: Quick Links / Actions (Unchanged) -->
+        <!-- Quick Links / Actions (Unchanged) -->
         <div class="dashboard-section">
             <h2>Quick Links</h2>
             <div class="quick-links-container">
