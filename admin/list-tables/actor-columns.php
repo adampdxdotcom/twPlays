@@ -1,10 +1,9 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v3.2 - BULLETPROOF VERSION)
+ * ULTIMATE DEBUGGING SCRIPT for Actor Columns.
  *
- * This version adds stronger validation to prevent fatal errors when relationship
- * fields (like the link to a play) are empty or corrupted in the database.
- * This resolves the "Call to a member function field() on false" error permanently.
+ * This script will halt execution and dump all raw data for a specific actor's
+ * roles. This will definitively show the correct data structure.
  *
  * @package TW_Plays
  */
@@ -14,111 +13,47 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// ... (The CSS and column definition functions are unchanged and correct) ...
+// We only need one function for this test.
+function tw_plays_ultimate_actor_debug( $column_name, $post_id ) {
+    // ====> IMPORTANT: REPLACE THIS WITH THE ID OF AN ACTOR YOU KNOW HAS A ROLE <====
+    $target_actor_id = 5409; 
 
-function tw_plays_actor_column_styles() {
-    $current_screen = get_current_screen();
-    if ( $current_screen && 'edit-actor' === $current_screen->id ) {
-        echo '<style>.column-actor_headshot { width: 120px; }</style>';
-    }
-}
-add_action( 'admin_head', 'tw_plays_actor_column_styles' );
-
-function tw_plays_set_actor_columns( $columns ) {
-    $new_columns = [ 'cb' => $columns['cb'] ];
-    $new_columns['actor_headshot']         = 'Headshot';
-    $new_columns['title']                  = 'Actor Name';
-    $new_columns['actor_current_activity'] = 'Current Activity';
-    $new_columns['date']                   = 'Date';
-    return $new_columns;
-}
-add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
-
-function tw_plays_set_actor_primary_column( $default, $screen_id ) {
-    if ( 'edit-actor' === $screen_id ) {
-        return 'title';
-    }
-    return $default;
-}
-add_filter( 'list_table_primary_column', 'tw_plays_set_actor_primary_column', 10, 2 );
-
-/**
- * 4. RENDER CONTENT for all our custom columns.
- */
-function tw_plays_render_actor_columns( $column_name, $post_id ) {
-    switch ( $column_name ) {
-        case 'actor_headshot':
-            $headshot_data = pods( 'actor', $post_id )->field( 'headshot' );
-            if ( ! empty( $headshot_data['guid'] ) ) {
-                $image_url = wp_get_attachment_image_url( $headshot_data['ID'], 'thumbnail' );
-                echo '<img src="' . esc_url( $image_url ) . '" alt="Actor Headshot" style="height: 100px; width: 100px; object-fit: cover; border-radius: 4px;"/>';
-            } else { echo '&mdash;'; }
-            break;
+    // Only run this test on our specific target actor.
+    if ( $column_name === 'actor_current_activity' && $post_id === $target_actor_id ) {
         
-        case 'actor_current_activity':
-            $activity_lines = [];
+        echo '<pre style="background: #1d2327; color: #fff; padding: 20px; font-size: 14px; white-space: pre-wrap; margin: 20px;">';
 
-            // --- Query 1 & 2: Cast & Crew (with stronger sanity checks) ---
-            $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $post_id ] ] );
+        // --- DUMP CASTING RECORDS ---
+        echo "<h1>--- DEBUGGING CASTING RECORDS ---</h1>";
+        $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $target_actor_id ] ] );
+        echo "<h2>Found: " . $casting_records->total() . " Casting Records</h2>";
+
+        if ( $casting_records->total() > 0 ) {
+            echo "<h3>Looping through records...</h3>";
             foreach ( $casting_records as $record ) {
-                // --- STRONGER FIX (Part 1) ---
-                $play_id = $record->field( 'play.ID' );
-                if ( ! is_numeric( $play_id ) || $play_id <= 0 ) { continue; } // Ensures we have a valid post ID.
-                $play_pod = pods( 'play', $play_id );
-                if ( ! $play_pod || ! $play_pod->exists() ) { continue; }
-                // --- END FIX ---
-
-                if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
-                    $play_title = $play_pod->field('post_title');
-                    $character  = $record->field('character_name');
-                    $activity_lines[] = '<strong>Play:</strong> ' . esc_html( $play_title ) . ' as ' . esc_html( $character );
-                }
+                echo "\n--- Casting Record ID: " . $record->id() . " ---\n";
+                var_dump( $record->data() );
             }
+        }
 
-            $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $post_id ] ] );
+        // --- DUMP CREW RECORDS ---
+        echo "\n\n<h1>--- DEBUGGING CREW RECORDS ---</h1>";
+        $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $target_actor_id ] ] );
+        echo "<h2>Found: " . $crew_records->total() . " Crew Records</h2>";
+        
+        if ( $crew_records->total() > 0 ) {
+            echo "<h3>Looping through records...</h3>";
             foreach ( $crew_records as $record ) {
-                // --- STRONGER FIX (Part 2) ---
-                $play_id = $record->field( 'play.ID' );
-                if ( ! is_numeric( $play_id ) || $play_id <= 0 ) { continue; } // This is the line that will fix the crash.
-                $play_pod = pods( 'play', $play_id );
-                if ( ! $play_pod || ! $play_pod->exists() ) { continue; }
-                // --- END FIX ---
-
-                if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
-                    $play_title = $play_pod->field('post_title');
-                    $position   = $record->display('crew');
-                    $activity_lines[] = '<strong>Play:</strong> ' . esc_html( $play_title ) . ', ' . esc_html( $position );
-                }
+                echo "\n--- Crew Record ID: " . $record->id() . " ---\n";
+                var_dump( $record->data() );
             }
-            
-            // --- Query 3: Board Position (this method is already bulletproof) ---
-            $board_terms = pods( 'board_term', [
-                'limit' => 1,
-                'where' => [
-                    [ 'key' => 'board_member_name.ID', 'value' => $post_id ],
-                    [ 'key' => 'start_date', 'value' => date('Y-m-d'), 'compare' => '<=', 'type' => 'DATE' ],
-                    [ 'key' => 'end_date', 'value' => date('Y-m-d'), 'compare' => '>=', 'type' => 'DATE' ],
-                ]
-            ]);
-            if ( $board_terms->total() > 0 ) {
-                $board_terms->fetch();
-                $position_id = $board_terms->field('board_position.ID');
-                if ( is_numeric($position_id) && $position_id > 0 ) {
-                    $position_pod = pods('positions', $position_id);
-                    if ($position_pod && $position_pod->exists() && $position_pod->field('is_board') == 1) {
-                        $position_title = $position_pod->field('post_title');
-                        $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html($position_title);
-                    }
-                }
-            }
-
-            // Display all collected results.
-            if ( empty( $activity_lines ) ) {
-                echo '&mdash;';
-            } else {
-                echo implode( '<br>', $activity_lines );
-            }
-            break;
+        }
+        
+        echo '</pre>';
+        
+        // Stop everything so we only see this output.
+        die( 'DEBUGGING COMPLETE. Please copy the text from the black box above.' );
     }
 }
-add_action( 'manage_actor_posts_custom_column', 'tw_plays_render_actor_columns', 10, 2 );
+// We hook into the action to run our test.
+add_action( 'manage_actor_posts_custom_column', 'tw_plays_ultimate_actor_debug', 10, 2 );
