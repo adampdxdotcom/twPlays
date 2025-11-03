@@ -1,9 +1,9 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v4.1 - FATAL ERROR FIX)
+ * Custom List Table Columns for the 'Actor' Pod. (v4.2 - Final Styling)
  *
- * This version corrects a fatal PHP error caused by a typo in a function
- * definition. The core logic for querying and displaying data remains the same.
+ * This version adds styling to the "Current Activity" column to improve
+ * readability, completing the feature.
  *
  * @package TW_Plays
  */
@@ -14,12 +14,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * 1. ADD CSS to adjust the column widths for a cleaner look.
+ * 1. ADD CSS to style our columns.
  */
 function tw_plays_actor_column_styles() {
     $current_screen = get_current_screen();
     if ( $current_screen && 'edit-actor' === $current_screen->id ) {
-        echo '<style>.column-actor_headshot { width: 120px; }</style>';
+        echo '
+        <style>
+            /* Give the headshot column a fixed, narrow width */
+            .column-actor_headshot {
+                width: 120px;
+            }
+            /* --- NEW: Style for the activity text --- */
+            .actor-activity-details {
+                font-size: 14px;      /* Make the font slightly larger */
+                line-height: 1.6;     /* Add a bit more space between lines */
+            }
+        </style>';
     }
 }
 add_action( 'admin_head', 'tw_plays_actor_column_styles' );
@@ -38,10 +49,10 @@ function tw_plays_set_actor_columns( $columns ) {
 add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
 
 /**
- * 3. DESIGNATE PRIMARY COLUMN: Unchanged.
+ * 3. DESIGNATE PRIMARY COLUMN: Unchanged and correct.
  */
-function tw_plays_set_actor_primary_column( $default, $screen_id ) { // CORRECTED a fatal typo here.
-    if ( 'edit-actor' === $screen_id ) { // CORRECTED a fatal typo here.
+function tw_plays_set_actor_primary_column( $default, $screen_id ) {
+    if ( 'edit-actor' === $screen_id ) {
         return 'title';
     }
     return $default;
@@ -64,7 +75,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
         case 'actor_current_activity':
             $activity_lines = [];
 
-            // --- Query 1 & 2: Cast & Crew (FINAL WORKING METHOD) ---
+            // --- Query 1 & 2: Cast & Crew ---
             $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $post_id ] ] );
             while ( $casting_records->fetch() ) {
                 $play_id = $casting_records->field('play.ID');
@@ -93,7 +104,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
             
-            // --- Query 3: Board Position (this method is already working) ---
+            // --- Query 3: Board Position ---
             $board_terms = pods( 'board_term', [
                 'limit' => 1,
                 'where' => [
@@ -116,11 +127,12 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
 
-            // Display all collected results.
+            // --- Display all collected results ---
             if ( empty( $activity_lines ) ) {
                 echo '&mdash;';
             } else {
-                echo implode( '<br>', $activity_lines );
+                // We wrap our output in a div with the new class for styling.
+                echo '<div class="actor-activity-details">' . implode( '<br>', $activity_lines ) . '</div>';
             }
             break;
     }
