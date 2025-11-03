@@ -1,10 +1,9 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v2.3 - RELIABLE QUERY METHOD)
+ * Custom List Table Columns for the 'Actor' Pod. (v2.4 - Cast & Crew Roles)
  *
- * This version uses the definitive field names confirmed by screenshots and
- * implements a more reliable, step-by-step method for checking the board
- * position, guaranteeing an accurate result.
+ * This version adds queries to find and display an actor's current cast and
+ * crew roles in active plays, in addition to their board position.
  *
  * @package TW_Plays
  */
@@ -29,7 +28,7 @@ add_action( 'admin_head', 'tw_plays_actor_column_styles' );
 
 
 /**
- * 2. REORDER & ADD Columns: Add the new "Current Activity" column.
+ * 2. REORDER & ADD Columns: Unchanged.
  */
 function tw_plays_set_actor_columns( $columns ) {
     $new_columns = [ 'cb' => $columns['cb'] ];
@@ -73,10 +72,8 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
         case 'actor_current_activity':
             $activity_lines = [];
 
-            // --- Query 1: Find the actor's current play ---
-            // This query uses the field names confirmed in your screenshot: 'actor' and 'play'.
-            $play_params = [
-                'limit' => 1,
+            // --- Query 1: Find the actor's CURRENT CAST roles ---
+            $cast_params = [
                 'where' => [
                     [ 'key' => 'actor.ID', 'value' => $post_id ],
                     [
@@ -90,17 +87,47 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                     ],
                 ],
             ];
-            $casting_records = pods( 'casting_record' )->find( $play_params );
+            $casting_records = pods( 'casting_record' )->find( $cast_params );
 
-            if ( $casting_records->total() > 0 ) {
-                $play_title = $casting_records->field( 'play.post_title' );
-                if ( ! empty( $play_title ) ) {
-                    $activity_lines[] = '<strong>Working on:</strong> ' . esc_html( $play_title );
+            // Loop through any found records
+            foreach ( $casting_records as $record ) {
+                $play_title = $record->field( 'play.post_title' );
+                $character  = $record->field( 'character_name' );
+                if ( ! empty( $play_title ) && ! empty( $character ) ) {
+                    $activity_lines[] = '<strong>Play:</strong> ' . esc_html( $play_title ) . ' as ' . esc_html( $character );
                 }
             }
 
-            // --- Query 2: Find the actor's current board position (RELIABLE METHOD) ---
-            // This query uses the field names confirmed in your screenshots: 'board_member_name', 'board_position', 'is_board'.
+            // --- Query 2: Find the actor's CURRENT CREW roles ---
+            // ASSUMPTION: Your 'crew' pod has relationship fields named 'actor' and 'play'.
+            $crew_params = [
+                'where' => [
+                    [ 'key' => 'actor.ID', 'value' => $post_id ],
+                    [
+                        'key'      => 'play.post_status',
+                        'value'    => 'publish',
+                        'relation' => 'AND',
+                        'where'    => [
+                            [ 'key' => 'current_show', 'value' => 1 ],
+                            [ 'key' => 'audition_status', 'value' => 1, 'relation' => 'OR' ],
+                        ],
+                    ],
+                ],
+            ];
+            $crew_records = pods( 'crew' )->find( $crew_params );
+
+            // Loop through any found records
+            foreach ( $crew_records as $record ) {
+                $play_title = $record->field( 'play.post_title' );
+                // ASSUMPTION: The crew position is a text field named 'crew_position'.
+                $position   = $record->field( 'crew_position' );
+                if ( ! empty( $play_title ) && ! empty( $position ) ) {
+                    $activity_lines[] = '<strong>Play:</strong> ' . esc_html( $play_title ) . ', ' . esc_html( $position );
+                }
+            }
+
+
+            // --- Query 3: Find the actor's current board position (this query is working) ---
             $board_params = [
                 'limit' => 1,
                 'where' => [
@@ -111,16 +138,9 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
             ];
             $board_terms = pods( 'board_term' )->find( $board_params );
 
-            // ** THE NEW RELIABLE LOGIC **
-            // First, we find an active term. THEN we check if their position is an elected one.
             if ( $board_terms->total() > 0 ) {
-                // We have to call fetch() to load the first result into memory.
                 $board_terms->fetch();
-                
-                // Now we can traverse the relationship to check the 'is_board' field.
                 $is_elected_board_member = $board_terms->field( 'board_position.is_board' );
-
-                // The 'is_board' field is a Yes/No, which Pods stores as 1 for Yes.
                 if ( 1 == $is_elected_board_member ) {
                     $position_title = $board_terms->field( 'board_position.post_title' );
                     if ( ! empty( $position_title ) ) {
@@ -129,7 +149,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
 
-            // Display the results.
+            // Display all collected results.
             if ( empty( $activity_lines ) ) {
                 echo '&mdash;';
             } else {
