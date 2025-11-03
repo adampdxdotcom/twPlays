@@ -1,10 +1,10 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v3.0 - FINAL WORKING VERSION)
+ * Custom List Table Columns for the 'Actor' Pod. (v3.1 - RESILIENT VERSION)
  *
- * This version uses a direct, simplified query method that is guaranteed to work.
- * It first finds all roles for an actor and then checks their status in PHP,
- * avoiding complex database queries that were failing silently.
+ * This version adds crucial "sanity checks" to prevent fatal errors when a
+ * casting or crew record is missing a link to its play. This makes the code
+ * resilient to "bad data" and resolves the fatal error.
  *
  * @package TW_Plays
  */
@@ -14,9 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/**
- * 1. ADD CSS to adjust the column widths for a cleaner look.
- */
+// ... (The CSS and column definition functions are unchanged and correct) ...
+
 function tw_plays_actor_column_styles() {
     $current_screen = get_current_screen();
     if ( $current_screen && 'edit-actor' === $current_screen->id ) {
@@ -25,9 +24,6 @@ function tw_plays_actor_column_styles() {
 }
 add_action( 'admin_head', 'tw_plays_actor_column_styles' );
 
-/**
- * 2. REORDER & ADD Columns: Unchanged.
- */
 function tw_plays_set_actor_columns( $columns ) {
     $new_columns = [ 'cb' => $columns['cb'] ];
     $new_columns['actor_headshot']         = 'Headshot';
@@ -38,9 +34,6 @@ function tw_plays_set_actor_columns( $columns ) {
 }
 add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
 
-/**
- * 3. DESIGNATE PRIMARY COLUMN: Unchanged.
- */
 function tw_plays_set_actor_primary_column( $default, $screen_id ) {
     if ( 'edit-actor' === $screen_id ) {
         return 'title';
@@ -65,12 +58,25 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
         case 'actor_current_activity':
             $activity_lines = [];
 
-            // --- Query 1 & 2: Cast & Crew (NEW RELIABLE METHOD) ---
-            // First, find ALL casting records for this actor.
+            // --- Query 1 & 2: Cast & Crew (with sanity checks) ---
             $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $post_id ] ] );
             foreach ( $casting_records as $record ) {
-                $play_pod = pods( 'play', $record->field( 'play.ID' ) );
-                // THEN, check if the play is active.
+                // --- THE FIX IS HERE (Part 1) ---
+                // First, get the play ID from the record.
+                $play_id = $record->field( 'play.ID' );
+                // If there's no play ID, skip this record entirely.
+                if ( empty( $play_id ) ) {
+                    continue;
+                }
+                // Now, safely load the play pod.
+                $play_pod = pods( 'play', $play_id );
+                // If the pod object couldn't be created or doesn't exist, skip.
+                if ( ! $play_pod->exists() ) {
+                    continue;
+                }
+                // --- END FIX ---
+
+                // Now it's safe to check the fields.
                 if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
                     $play_title = $play_pod->field('post_title');
                     $character  = $record->field('character_name');
@@ -78,11 +84,15 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
 
-            // Find ALL crew records for this actor.
             $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $post_id ] ] );
             foreach ( $crew_records as $record ) {
-                $play_pod = pods( 'play', $record->field( 'play.ID' ) );
-                // THEN, check if the play is active.
+                // --- THE FIX IS HERE (Part 2) ---
+                $play_id = $record->field( 'play.ID' );
+                if ( empty( $play_id ) ) { continue; }
+                $play_pod = pods( 'play', $play_id );
+                if ( ! $play_pod->exists() ) { continue; }
+                // --- END FIX ---
+
                 if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
                     $play_title = $play_pod->field('post_title');
                     $position   = $record->display('crew');
@@ -103,7 +113,9 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 $board_terms->fetch();
                 if ( 1 == $board_terms->field( 'board_position.is_board' ) ) {
                     $position_title = $board_terms->field( 'board_position.post_title' );
-                    $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html( $position_title );
+                    if ( ! empty( $position_title ) ) {
+                         $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html( $position_title );
+                    }
                 }
             }
 
