@@ -1,9 +1,9 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v2.1 with Query Fix)
+ * Custom List Table Columns for the 'Actor' Pod. (v2.2 with Corrected Board Query)
  *
- * This version corrects a database query error by using the correct field name
- * ('actor.ID') when looking up casting records.
+ * This version corrects the database query for finding an actor's board position
+ * by using a more explicit, nested WHERE clause.
  *
  * @package TW_Plays
  */
@@ -67,6 +67,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
     switch ( $column_name ) {
 
         case 'actor_headshot':
+            // ... (this part is correct and unchanged)
             $headshot_data = pods( 'actor', $post_id )->field( 'headshot' );
             if ( ! empty( $headshot_data['guid'] ) ) {
                 $image_url = wp_get_attachment_image_url( $headshot_data['ID'], 'thumbnail' );
@@ -79,13 +80,12 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
         case 'actor_current_activity':
             $activity_lines = [];
 
-            // --- Query 1: Find the actor's current play (with corrected field name) ---
+            // --- Query 1: Find the actor's current play (this query is now correct) ---
             $play_params = [
                 'limit' => 1,
                 'where' => [
                     [
-                        // THE FIX IS HERE: Changed 'actor_name.ID' to 'actor.ID'
-                        'key'   => 'actor.ID', // This is the relationship field in 'casting_record' pointing to the actor.
+                        'key'   => 'actor.ID',
                         'value' => $post_id,
                     ],
                     [
@@ -93,17 +93,8 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                         'value'    => 'publish',
                         'relation' => 'AND',
                         'where'    => [
-                            [
-                                'key'     => 'current_show',
-                                'value'   => 1,
-                                'compare' => '=',
-                            ],
-                            [
-                                'key'      => 'audition_status',
-                                'value'    => 1,
-                                'compare'  => '=',
-                                'relation' => 'OR',
-                            ],
+                            [ 'key' => 'current_show', 'value' => 1, 'compare' => '=' ],
+                            [ 'key' => 'audition_status', 'value' => 1, 'compare' => '=', 'relation' => 'OR' ],
                         ],
                     ],
                 ],
@@ -117,7 +108,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
 
-            // --- Query 2: Find the actor's current board position (this query was correct) ---
+            // --- Query 2: Find the actor's current board position (CORRECTED QUERY STRUCTURE) ---
             $board_params = [
                 'limit' => 1,
                 'where' => [
@@ -127,17 +118,28 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                     ],
                     [
                         'key'     => 'start_date',
-                        'value'   => 'NOW',
+                        'value'   => date('Y-m-d'), // Use a specific date for better compatibility
                         'compare' => '<=',
+                        'type'    => 'DATE',
                     ],
                     [
                         'key'     => 'end_date',
-                        'value'   => 'NOW',
+                        'value'   => date('Y-m-d'), // Use a specific date for better compatibility
                         'compare' => '>=',
+                        'type'    => 'DATE',
                     ],
+                    // THIS IS THE CORRECTED PART
                     [
-                        'key'     => 'board_position.is_board',
-                        'value'   => 1,
+                        'key'   => 'board_position.post_status', // Check that the related position is published
+                        'value' => 'publish',
+                        'relation' => 'AND',
+                        'where'    => [ // Nest the check for the 'is_board' field
+                            [
+                                'key'     => 'is_board',
+                                'value'   => 1,
+                                'compare' => '=',
+                            ],
+                        ],
                     ],
                 ],
             ];
