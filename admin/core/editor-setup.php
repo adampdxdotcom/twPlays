@@ -25,6 +25,7 @@ function tw_plays_get_custom_editor_config() {
         // 'post-type-slug' => 'Placeholder Text for the Title Input'
         'play'  => 'Play Name Here',
         'actor' => 'Actor Name Here',
+		'crew'  => 'Crew Member Name Here',
         // Example for the future: 'crew' => 'Crew Member Name Here',
     ];
 }
