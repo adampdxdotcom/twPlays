@@ -1,10 +1,9 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v2 with Current Activity)
+ * Custom List Table Columns for the 'Actor' Pod. (v2.1 with Query Fix)
  *
- * This file adds a "Headshot" column, a "Current Activity" column, and handles
- * the complex queries required to display an actor's current play and board status.
- * It also includes CSS to adjust column widths for a better layout.
+ * This version corrects a database query error by using the correct field name
+ * ('actor.ID') when looking up casting records.
  *
  * @package TW_Plays
  */
@@ -19,7 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function tw_plays_actor_column_styles() {
     $current_screen = get_current_screen();
-    // Only apply these styles on the "All Actors" list table screen.
     if ( $current_screen && 'edit-actor' === $current_screen->id ) {
         echo '<style>
             /* Give the headshot column a fixed, narrow width */
@@ -40,10 +38,9 @@ function tw_plays_set_actor_columns( $columns ) {
         'cb' => $columns['cb'],
     ];
 
-    // Define our new column order.
     $new_columns['actor_headshot']         = 'Headshot';
     $new_columns['title']                  = 'Actor Name';
-    $new_columns['actor_current_activity'] = 'Current Activity'; // Our new column
+    $new_columns['actor_current_activity'] = 'Current Activity';
     $new_columns['date']                   = 'Date';
 
     return $new_columns;
@@ -80,18 +77,18 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
             break;
         
         case 'actor_current_activity':
-            // This is where we run our smart queries.
-            $activity_lines = []; // An array to hold the lines of text we find.
+            $activity_lines = [];
 
-            // --- Query 1: Find the actor's current play ---
+            // --- Query 1: Find the actor's current play (with corrected field name) ---
             $play_params = [
-                'limit' => 1, // We only need to find one.
+                'limit' => 1,
                 'where' => [
                     [
-                        'key'   => 'actor_name.ID', // Assuming 'casting_record' has a field named 'actor_name' linked to the actor.
+                        // THE FIX IS HERE: Changed 'actor_name.ID' to 'actor.ID'
+                        'key'   => 'actor.ID', // This is the relationship field in 'casting_record' pointing to the actor.
                         'value' => $post_id,
                     ],
-                    [ // This is a sub-query to check the related play's status.
+                    [
                         'key'      => 'play.post_status',
                         'value'    => 'publish',
                         'relation' => 'AND',
@@ -105,7 +102,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                                 'key'      => 'audition_status',
                                 'value'    => 1,
                                 'compare'  => '=',
-                                'relation' => 'OR', // It's a current show OR auditions are open.
+                                'relation' => 'OR',
                             ],
                         ],
                     ],
@@ -120,12 +117,12 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
 
-            // --- Query 2: Find the actor's current board position ---
+            // --- Query 2: Find the actor's current board position (this query was correct) ---
             $board_params = [
                 'limit' => 1,
                 'where' => [
                     [
-                        'key'   => 'board_member_name.ID', // This comes from your template code.
+                        'key'   => 'board_member_name.ID',
                         'value' => $post_id,
                     ],
                     [
@@ -139,7 +136,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                         'compare' => '>=',
                     ],
                     [
-                        'key'     => 'board_position.is_board', // The key check from your template.
+                        'key'     => 'board_position.is_board',
                         'value'   => 1,
                     ],
                 ],
@@ -153,7 +150,7 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
 
-            // Now, display the results.
+            // Display the results.
             if ( empty( $activity_lines ) ) {
                 echo '&mdash;';
             } else {
