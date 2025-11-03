@@ -9,17 +9,17 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 // =========================================================================
 require_once TW_PLAYS_PATH . 'admin/menu.php';
 require_once TW_PLAYS_PATH . 'admin/dashboard-page.php';
+require_once TW_PLAYS_PATH . 'admin/core/editor-setup.php';
 
 
 // =========================================================================
 // == Play Pod Customizations
 // =========================================================================
 require_once TW_PLAYS_PATH . 'admin/list-tables/play-columns.php';
-require_once TW_PLAYS_PATH . 'admin/list-tables/play-editor.php';
 
 
 // =========================================================================
 // == Actor Pod Customizations (NEWLY ADDED)
 // =========================================================================
 require_once TW_PLAYS_PATH . 'admin/list-tables/actor-columns.php';
-require_once TW_PLAYS_PATH . 'admin/list-tables/actor-editor.php';
+
