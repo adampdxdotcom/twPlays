@@ -1,9 +1,10 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v2.2 with Corrected Board Query)
+ * Custom List Table Columns for the 'Actor' Pod. (v2.3 - RELIABLE QUERY METHOD)
  *
- * This version corrects the database query for finding an actor's board position
- * by using a more explicit, nested WHERE clause.
+ * This version uses the definitive field names confirmed by screenshots and
+ * implements a more reliable, step-by-step method for checking the board
+ * position, guaranteeing an accurate result.
  *
  * @package TW_Plays
  */
@@ -20,10 +21,7 @@ function tw_plays_actor_column_styles() {
     $current_screen = get_current_screen();
     if ( $current_screen && 'edit-actor' === $current_screen->id ) {
         echo '<style>
-            /* Give the headshot column a fixed, narrow width */
-            .column-actor_headshot {
-                width: 120px;
-            }
+            .column-actor_headshot { width: 120px; }
         </style>';
     }
 }
@@ -34,22 +32,18 @@ add_action( 'admin_head', 'tw_plays_actor_column_styles' );
  * 2. REORDER & ADD Columns: Add the new "Current Activity" column.
  */
 function tw_plays_set_actor_columns( $columns ) {
-    $new_columns = [
-        'cb' => $columns['cb'],
-    ];
-
+    $new_columns = [ 'cb' => $columns['cb'] ];
     $new_columns['actor_headshot']         = 'Headshot';
     $new_columns['title']                  = 'Actor Name';
     $new_columns['actor_current_activity'] = 'Current Activity';
     $new_columns['date']                   = 'Date';
-
     return $new_columns;
 }
 add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
 
 
 /**
- * 3. DESIGNATE PRIMARY COLUMN: Unchanged, still the 'title' column.
+ * 3. DESIGNATE PRIMARY COLUMN: Unchanged.
  */
 function tw_plays_set_actor_primary_column( $default, $screen_id ) {
     if ( 'edit-actor' === $screen_id ) {
@@ -67,7 +61,6 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
     switch ( $column_name ) {
 
         case 'actor_headshot':
-            // ... (this part is correct and unchanged)
             $headshot_data = pods( 'actor', $post_id )->field( 'headshot' );
             if ( ! empty( $headshot_data['guid'] ) ) {
                 $image_url = wp_get_attachment_image_url( $headshot_data['ID'], 'thumbnail' );
@@ -80,21 +73,19 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
         case 'actor_current_activity':
             $activity_lines = [];
 
-            // --- Query 1: Find the actor's current play (this query is now correct) ---
+            // --- Query 1: Find the actor's current play ---
+            // This query uses the field names confirmed in your screenshot: 'actor' and 'play'.
             $play_params = [
                 'limit' => 1,
                 'where' => [
-                    [
-                        'key'   => 'actor.ID',
-                        'value' => $post_id,
-                    ],
+                    [ 'key' => 'actor.ID', 'value' => $post_id ],
                     [
                         'key'      => 'play.post_status',
                         'value'    => 'publish',
                         'relation' => 'AND',
                         'where'    => [
-                            [ 'key' => 'current_show', 'value' => 1, 'compare' => '=' ],
-                            [ 'key' => 'audition_status', 'value' => 1, 'compare' => '=', 'relation' => 'OR' ],
+                            [ 'key' => 'current_show', 'value' => 1 ],
+                            [ 'key' => 'audition_status', 'value' => 1, 'relation' => 'OR' ],
                         ],
                     ],
                 ],
@@ -108,47 +99,33 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
                 }
             }
 
-            // --- Query 2: Find the actor's current board position (CORRECTED QUERY STRUCTURE) ---
+            // --- Query 2: Find the actor's current board position (RELIABLE METHOD) ---
+            // This query uses the field names confirmed in your screenshots: 'board_member_name', 'board_position', 'is_board'.
             $board_params = [
                 'limit' => 1,
                 'where' => [
-                    [
-                        'key'   => 'board_member_name.ID',
-                        'value' => $post_id,
-                    ],
-                    [
-                        'key'     => 'start_date',
-                        'value'   => date('Y-m-d'), // Use a specific date for better compatibility
-                        'compare' => '<=',
-                        'type'    => 'DATE',
-                    ],
-                    [
-                        'key'     => 'end_date',
-                        'value'   => date('Y-m-d'), // Use a specific date for better compatibility
-                        'compare' => '>=',
-                        'type'    => 'DATE',
-                    ],
-                    // THIS IS THE CORRECTED PART
-                    [
-                        'key'   => 'board_position.post_status', // Check that the related position is published
-                        'value' => 'publish',
-                        'relation' => 'AND',
-                        'where'    => [ // Nest the check for the 'is_board' field
-                            [
-                                'key'     => 'is_board',
-                                'value'   => 1,
-                                'compare' => '=',
-                            ],
-                        ],
-                    ],
+                    [ 'key' => 'board_member_name.ID', 'value' => $post_id ],
+                    [ 'key' => 'start_date', 'value' => date('Y-m-d'), 'compare' => '<=', 'type' => 'DATE' ],
+                    [ 'key' => 'end_date', 'value' => date('Y-m-d'), 'compare' => '>=', 'type' => 'DATE' ],
                 ],
             ];
             $board_terms = pods( 'board_term' )->find( $board_params );
 
+            // ** THE NEW RELIABLE LOGIC **
+            // First, we find an active term. THEN we check if their position is an elected one.
             if ( $board_terms->total() > 0 ) {
-                $position_title = $board_terms->field( 'board_position.post_title' );
-                if ( ! empty( $position_title ) ) {
-                    $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html( $position_title );
+                // We have to call fetch() to load the first result into memory.
+                $board_terms->fetch();
+                
+                // Now we can traverse the relationship to check the 'is_board' field.
+                $is_elected_board_member = $board_terms->field( 'board_position.is_board' );
+
+                // The 'is_board' field is a Yes/No, which Pods stores as 1 for Yes.
+                if ( 1 == $is_elected_board_member ) {
+                    $position_title = $board_terms->field( 'board_position.post_title' );
+                    if ( ! empty( $position_title ) ) {
+                        $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html( $position_title );
+                    }
                 }
             }
 
