@@ -1,13 +1,25 @@
 <?php
 /**
- * Plugin Initializer (DEBUGGING - Step 3 / Final)
+ * Plugin Initializer (Final Version with Actor Pod)
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-// Load the known good files
+// =========================================================================
+// == General Admin Pages
+// =========================================================================
 require_once TW_PLAYS_PATH . 'admin/menu.php';
 require_once TW_PLAYS_PATH . 'admin/dashboard-page.php';
-require_once TW_PLAYS_PATH . 'admin/list-tables/play-columns.php';
 
-// ADDING THIS FILE BACK
+
+// =========================================================================
+// == Play Pod Customizations
+// =========================================================================
+require_once TW_PLAYS_PATH . 'admin/list-tables/play-columns.php';
 require_once TW_PLAYS_PATH . 'admin/list-tables/play-editor.php';
+
+
+// =========================================================================
+// == Actor Pod Customizations (NEWLY ADDED)
+// =========================================================================
+require_once TW_PLAYS_PATH . 'admin/list-tables/actor-columns.php';
+require_once TW_PLAYS_PATH . 'admin/list-tables/actor-editor.php';
