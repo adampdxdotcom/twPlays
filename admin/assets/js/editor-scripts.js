@@ -1,4 +1,4 @@
-// admin/assets/js/editor-scripts.js (FINAL CORRECTED VERSION)
+// admin/assets/js/editor-scripts.js (MODIFIED FOR ACTOR POD)
 
 jQuery(document).ready(function($) {
 
@@ -16,31 +16,51 @@ jQuery(document).ready(function($) {
         }, 100); // Check every 100 milliseconds
     }
 
-/* ==========================================================================
-   PLAY POD LIVE UPDATE (CLASSIC EDITOR METHOD)
-   ========================================================================== */
-if ($('body').hasClass('post-type-play')) {
-    // Wait for our custom input AND the original #title input to exist.
-    waitForElement('#tw-plays-custom-title-input, #title', function() {
+    /* ==========================================================================
+       PLAY POD LIVE UPDATE (CLASSIC EDITOR METHOD)
+       ========================================================================== */
+    if ($('body').hasClass('post-type-play')) {
+        // Wait for our custom input AND the original #title input to exist.
+        waitForElement('#tw-plays-custom-title-input, #title', function() {
 
-        var customTitleInput = $('#tw-plays-custom-title-input');
-        var realTitleInput   = $('#title'); // This is the real, hidden WordPress title field.
+            var customTitleInput = $('#tw-plays-custom-title-input');
+            var realTitleInput   = $('#title'); // This is the real, hidden WordPress title field.
 
-        // This function copies the text from our custom field to the real one.
-        function syncTitles() {
-            var newTitle = customTitleInput.val();
-            realTitleInput.val(newTitle);
-        }
+            // This function copies the text from our custom field to the real one.
+            function syncTitles() {
+                var newTitle = customTitleInput.val();
+                realTitleInput.val(newTitle);
+            }
 
-        // Run the sync function whenever the user types or pastes.
-        customTitleInput.on('keyup paste change', syncTitles);
+            // Run the sync function whenever the user types or pastes.
+            customTitleInput.on('keyup paste change', syncTitles);
 
-        // Sync on page load in case we are editing an existing post.
-        syncTitles();
-    });
-}
+            // Sync on page load in case we are editing an existing post.
+            syncTitles();
+        });
+    }
     
-    
+    /* ==========================================================================
+       ACTOR POD LIVE UPDATE (CLASSIC EDITOR METHOD) - THIS IS THE MODIFIED SECTION
+       ========================================================================== */
+    if ($('body').hasClass('post-type-actor')) {
+        // This logic is now an exact copy of the 'play' pod's logic.
+        // It looks for the same custom title input we created in actor-editor.php.
+        waitForElement('#tw-plays-custom-title-input, #title', function() {
+
+            var customTitleInput = $('#tw-plays-custom-title-input');
+            var realTitleInput   = $('#title'); // The real, hidden WordPress title field.
+
+            function syncTitles() {
+                var newTitle = customTitleInput.val();
+                realTitleInput.val(newTitle);
+            }
+
+            customTitleInput.on('keyup paste change', syncTitles);
+            syncTitles(); // Sync on page load
+        });
+    }
+
     /* ==========================================================================
        SECTION 1: CREW POD LIVE UPDATE
        ========================================================================== */
@@ -62,22 +82,6 @@ if ($('body').hasClass('post-type-play')) {
             }
             if (crewField.length > 0) { crewField.on('change', updateCrewTitle); }
             if (playContainer.length > 0) { new MutationObserver(updateCrewTitle).observe(playContainer[0], { childList: true, subtree: true }); }
-        });
-    }
-
-    /* ==========================================================================
-       SECTION 2: ACTOR POD LIVE UPDATE
-       ========================================================================== */
-    if ($('body').hasClass('post-type-actor')) {
-        waitForElement('#pods-form-ui-pods-meta-actorname', function() {
-            var actorNameField = $('#pods-form-ui-pods-meta-actorname');
-            function updateActorTitle() {
-                var newTitle = actorNameField.val();
-                if (newTitle && typeof wp.data !== 'undefined') {
-                    wp.data.dispatch('core/editor').editPost({ title: newTitle });
-                }
-            }
-            if (actorNameField.length > 0) { actorNameField.on('keyup', updateActorTitle); }
         });
     }
 
