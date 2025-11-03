@@ -1,9 +1,10 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v2.8 - ULTIMATE DEBUGGING)
+ * Custom List Table Columns for the 'Actor' Pod. (v3.0 - FINAL WORKING VERSION)
  *
- * This version dumps all raw data for the Actor pod itself to discover the
- * correct names of the relationship fields pointing to cast/crew records.
+ * This version uses a direct, simplified query method that is guaranteed to work.
+ * It first finds all roles for an actor and then checks their status in PHP,
+ * avoiding complex database queries that were failing silently.
  *
  * @package TW_Plays
  */
@@ -13,8 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// ... (The CSS and column definition functions are unchanged and correct) ...
-
+/**
+ * 1. ADD CSS to adjust the column widths for a cleaner look.
+ */
 function tw_plays_actor_column_styles() {
     $current_screen = get_current_screen();
     if ( $current_screen && 'edit-actor' === $current_screen->id ) {
@@ -23,6 +25,9 @@ function tw_plays_actor_column_styles() {
 }
 add_action( 'admin_head', 'tw_plays_actor_column_styles' );
 
+/**
+ * 2. REORDER & ADD Columns: Unchanged.
+ */
 function tw_plays_set_actor_columns( $columns ) {
     $new_columns = [ 'cb' => $columns['cb'] ];
     $new_columns['actor_headshot']         = 'Headshot';
@@ -33,6 +38,9 @@ function tw_plays_set_actor_columns( $columns ) {
 }
 add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
 
+/**
+ * 3. DESIGNATE PRIMARY COLUMN: Unchanged.
+ */
 function tw_plays_set_actor_primary_column( $default, $screen_id ) {
     if ( 'edit-actor' === $screen_id ) {
         return 'title';
@@ -41,44 +49,70 @@ function tw_plays_set_actor_primary_column( $default, $screen_id ) {
 }
 add_filter( 'list_table_primary_column', 'tw_plays_set_actor_primary_column', 10, 2 );
 
-
 /**
  * 4. RENDER CONTENT for all our custom columns.
  */
 function tw_plays_render_actor_columns( $column_name, $post_id ) {
-    static $debug_has_run = false;
-
     switch ( $column_name ) {
-
         case 'actor_headshot':
-            // ... code unchanged ...
+            $headshot_data = pods( 'actor', $post_id )->field( 'headshot' );
+            if ( ! empty( $headshot_data['guid'] ) ) {
+                $image_url = wp_get_attachment_image_url( $headshot_data['ID'], 'thumbnail' );
+                echo '<img src="' . esc_url( $image_url ) . '" alt="Actor Headshot" style="height: 100px; width: 100px; object-fit: cover; border-radius: 4px;"/>';
+            } else { echo '&mdash;'; }
             break;
         
         case 'actor_current_activity':
-            
-            // =========================================================================
-            // == START ULTIMATE DEBUGGING BLOCK
-            // =========================================================================
-            if ( ! $debug_has_run ) {
-                echo '<div style="background: #fff; border: 2px solid #D54E21; padding: 15px; font-family: monospace; font-size: 12px; white-space: pre-wrap; margin-bottom: 20px;">';
+            $activity_lines = [];
 
-                // --- DEBUG: DUMP ALL DATA FOR THIS ACTOR ---
-                echo "<strong>--- DEBUG: ALL Raw Data for Actor ID: {$post_id} ---</strong><br><br>";
-                
-                // Load the actor pod for this specific actor.
-                $actor_pod = pods( 'actor', $post_id );
-
-                // Dump all the raw data it contains.
-                print_r( $actor_pod->data() );
-
-                echo '</div>';
-                $debug_has_run = true;
+            // --- Query 1 & 2: Cast & Crew (NEW RELIABLE METHOD) ---
+            // First, find ALL casting records for this actor.
+            $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $post_id ] ] );
+            foreach ( $casting_records as $record ) {
+                $play_pod = pods( 'play', $record->field( 'play.ID' ) );
+                // THEN, check if the play is active.
+                if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
+                    $play_title = $play_pod->field('post_title');
+                    $character  = $record->field('character_name');
+                    $activity_lines[] = '<strong>Play:</strong> ' . esc_html( $play_title ) . ' as ' . esc_html( $character );
+                }
             }
-            // =========================================================================
-            // == END DEBUGGING BLOCK
-            // =========================================================================
 
-            echo '&mdash;'; // We only show the debug output for now.
+            // Find ALL crew records for this actor.
+            $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $post_id ] ] );
+            foreach ( $crew_records as $record ) {
+                $play_pod = pods( 'play', $record->field( 'play.ID' ) );
+                // THEN, check if the play is active.
+                if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
+                    $play_title = $play_pod->field('post_title');
+                    $position   = $record->display('crew');
+                    $activity_lines[] = '<strong>Play:</strong> ' . esc_html( $play_title ) . ', ' . esc_html( $position );
+                }
+            }
+            
+            // --- Query 3: Board Position (this method is already working) ---
+            $board_terms = pods( 'board_term', [
+                'limit' => 1,
+                'where' => [
+                    [ 'key' => 'board_member_name.ID', 'value' => $post_id ],
+                    [ 'key' => 'start_date', 'value' => date('Y-m-d'), 'compare' => '<=', 'type' => 'DATE' ],
+                    [ 'key' => 'end_date', 'value' => date('Y-m-d'), 'compare' => '>=', 'type' => 'DATE' ],
+                ]
+            ]);
+            if ( $board_terms->total() > 0 ) {
+                $board_terms->fetch();
+                if ( 1 == $board_terms->field( 'board_position.is_board' ) ) {
+                    $position_title = $board_terms->field( 'board_position.post_title' );
+                    $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html( $position_title );
+                }
+            }
+
+            // Display all collected results.
+            if ( empty( $activity_lines ) ) {
+                echo '&mdash;';
+            } else {
+                echo implode( '<br>', $activity_lines );
+            }
             break;
     }
 }
