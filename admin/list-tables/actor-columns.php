@@ -1,10 +1,10 @@
 <?php
 /**
- * CORRECTED DEBUGGING SCRIPT for Actor Columns.
+ * CORRECTED DEBUGGING SCRIPT (v2) for Actor Columns.
  *
- * This version restores the column-creation functions so the page renders
- * correctly, and then adds debugging output to the 'Current Activity' column
- * for every actor to definitively show the data structure.
+ * This version uses the correct, official `while ( $pods->fetch() )` loop
+ * structure, which is guaranteed not to cause a fatal error. This will allow us
+ * to finally see the raw data for the actor's roles.
  *
  * @package TW_Plays
  */
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * 1. ADD CSS to adjust the column widths for a cleaner look. (Restored)
+ * 1. ADD CSS (Restored)
  */
 function tw_plays_actor_column_styles() {
     $current_screen = get_current_screen();
@@ -26,7 +26,7 @@ function tw_plays_actor_column_styles() {
 add_action( 'admin_head', 'tw_plays_actor_column_styles' );
 
 /**
- * 2. REORDER & ADD Columns: This is essential for the debug hook to run. (Restored)
+ * 2. REORDER & ADD Columns (Restored)
  */
 function tw_plays_set_actor_columns( $columns ) {
     $new_columns = [ 'cb' => $columns['cb'] ];
@@ -39,7 +39,7 @@ function tw_plays_set_actor_columns( $columns ) {
 add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
 
 /**
- * 3. DESIGNATE PRIMARY COLUMN: Unchanged. (Restored)
+ * 3. DESIGNATE PRIMARY COLUMN (Restored)
  */
 function tw_plays_set_actor_primary_column( $default, $screen_id ) {
     if ( 'edit-actor' === $screen_id ) {
@@ -74,22 +74,22 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
             echo "<strong>CASTING RECORDS (Actor ID: {$post_id})</strong>\n";
             $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $post_id ] ] );
             echo "Found: " . $casting_records->total() . "\n";
-            if ( $casting_records->total() > 0 ) {
-                foreach ( $casting_records as $record ) {
-                    echo " -- Record ID: " . $record->id() . " --\n";
-                    print_r( $record->data() );
-                }
+            
+            // ** THE FIX IS HERE: Using the correct while...fetch loop **
+            while ( $casting_records->fetch() ) {
+                echo " -- Casting Record ID: " . $casting_records->id() . " --\n";
+                print_r( $casting_records->data() );
             }
 
             // --- DUMP CREW RECORDS ---
             echo "\n<strong>CREW RECORDS (Actor ID: {$post_id})</strong>\n";
             $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $post_id ] ] );
             echo "Found: " . $crew_records->total() . "\n";
-            if ( $crew_records->total() > 0 ) {
-                foreach ( $crew_records as $record ) {
-                    echo " -- Record ID: " . $record->id() . " --\n";
-                    print_r( $record->data() );
-                }
+            
+            // ** THE FIX IS HERE: Using the correct while...fetch loop **
+            while ( $crew_records->fetch() ) {
+                echo " -- Crew Record ID: " . $crew_records->id() . " --\n";
+                print_r( $crew_records->data() );
             }
             
             echo '</pre>';
