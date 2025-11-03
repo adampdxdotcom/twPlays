@@ -1,9 +1,10 @@
 <?php
 /**
- * ULTIMATE DEBUGGING SCRIPT for Actor Columns.
+ * CORRECTED DEBUGGING SCRIPT for Actor Columns.
  *
- * This script will halt execution and dump all raw data for a specific actor's
- * roles. This will definitively show the correct data structure.
+ * This version restores the column-creation functions so the page renders
+ * correctly, and then adds debugging output to the 'Current Activity' column
+ * for every actor to definitively show the data structure.
  *
  * @package TW_Plays
  */
@@ -13,47 +14,90 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// We only need one function for this test.
-function tw_plays_ultimate_actor_debug( $column_name, $post_id ) {
-    // ====> IMPORTANT: REPLACE THIS WITH THE ID OF AN ACTOR YOU KNOW HAS A ROLE <====
-    $target_actor_id = 5409; 
-
-    // Only run this test on our specific target actor.
-    if ( $column_name === 'actor_current_activity' && $post_id === $target_actor_id ) {
-        
-        echo '<pre style="background: #1d2327; color: #fff; padding: 20px; font-size: 14px; white-space: pre-wrap; margin: 20px;">';
-
-        // --- DUMP CASTING RECORDS ---
-        echo "<h1>--- DEBUGGING CASTING RECORDS ---</h1>";
-        $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $target_actor_id ] ] );
-        echo "<h2>Found: " . $casting_records->total() . " Casting Records</h2>";
-
-        if ( $casting_records->total() > 0 ) {
-            echo "<h3>Looping through records...</h3>";
-            foreach ( $casting_records as $record ) {
-                echo "\n--- Casting Record ID: " . $record->id() . " ---\n";
-                var_dump( $record->data() );
-            }
-        }
-
-        // --- DUMP CREW RECORDS ---
-        echo "\n\n<h1>--- DEBUGGING CREW RECORDS ---</h1>";
-        $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $target_actor_id ] ] );
-        echo "<h2>Found: " . $crew_records->total() . " Crew Records</h2>";
-        
-        if ( $crew_records->total() > 0 ) {
-            echo "<h3>Looping through records...</h3>";
-            foreach ( $crew_records as $record ) {
-                echo "\n--- Crew Record ID: " . $record->id() . " ---\n";
-                var_dump( $record->data() );
-            }
-        }
-        
-        echo '</pre>';
-        
-        // Stop everything so we only see this output.
-        die( 'DEBUGGING COMPLETE. Please copy the text from the black box above.' );
+/**
+ * 1. ADD CSS to adjust the column widths for a cleaner look. (Restored)
+ */
+function tw_plays_actor_column_styles() {
+    $current_screen = get_current_screen();
+    if ( $current_screen && 'edit-actor' === $current_screen->id ) {
+        echo '<style>.column-actor_headshot { width: 120px; }</style>';
     }
 }
-// We hook into the action to run our test.
-add_action( 'manage_actor_posts_custom_column', 'tw_plays_ultimate_actor_debug', 10, 2 );
+add_action( 'admin_head', 'tw_plays_actor_column_styles' );
+
+/**
+ * 2. REORDER & ADD Columns: This is essential for the debug hook to run. (Restored)
+ */
+function tw_plays_set_actor_columns( $columns ) {
+    $new_columns = [ 'cb' => $columns['cb'] ];
+    $new_columns['actor_headshot']         = 'Headshot';
+    $new_columns['title']                  = 'Actor Name';
+    $new_columns['actor_current_activity'] = 'Current Activity';
+    $new_columns['date']                   = 'Date';
+    return $new_columns;
+}
+add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
+
+/**
+ * 3. DESIGNATE PRIMARY COLUMN: Unchanged. (Restored)
+ */
+function tw_plays_set_actor_primary_column( $default, $screen_id ) {
+    if ( 'edit-actor' === $screen_id ) {
+        return 'title';
+    }
+    return $default;
+}
+add_filter( 'list_table_primary_column', 'tw_plays_set_actor_primary_column', 10, 2 );
+
+
+/**
+ * 4. RENDER CONTENT and our DEBUGGING OUTPUT.
+ */
+function tw_plays_render_actor_columns( $column_name, $post_id ) {
+    switch ( $column_name ) {
+        case 'actor_headshot':
+            $headshot_data = pods( 'actor', $post_id )->field( 'headshot' );
+            if ( ! empty( $headshot_data['guid'] ) ) {
+                $image_url = wp_get_attachment_image_url( $headshot_data['ID'], 'thumbnail' );
+                echo '<img src="' . esc_url( $image_url ) . '" alt="Actor Headshot" style="height: 100px; width: 100px; object-fit: cover; border-radius: 4px;"/>';
+            } else { echo '&mdash;'; }
+            break;
+        
+        case 'actor_current_activity':
+            
+            // =========================================================================
+            // == START DEBUGGING BLOCK
+            // =========================================================================
+            echo '<pre style="background: #fffbcf; color: #3c434a; border: 1px solid #f0e69a; padding: 10px; font-size: 12px; white-space: pre-wrap;">';
+
+            // --- DUMP CASTING RECORDS ---
+            echo "<strong>CASTING RECORDS (Actor ID: {$post_id})</strong>\n";
+            $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $post_id ] ] );
+            echo "Found: " . $casting_records->total() . "\n";
+            if ( $casting_records->total() > 0 ) {
+                foreach ( $casting_records as $record ) {
+                    echo " -- Record ID: " . $record->id() . " --\n";
+                    print_r( $record->data() );
+                }
+            }
+
+            // --- DUMP CREW RECORDS ---
+            echo "\n<strong>CREW RECORDS (Actor ID: {$post_id})</strong>\n";
+            $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $post_id ] ] );
+            echo "Found: " . $crew_records->total() . "\n";
+            if ( $crew_records->total() > 0 ) {
+                foreach ( $crew_records as $record ) {
+                    echo " -- Record ID: " . $record->id() . " --\n";
+                    print_r( $record->data() );
+                }
+            }
+            
+            echo '</pre>';
+            // =========================================================================
+            // == END DEBUGGING BLOCK
+            // =========================================================================
+            
+            break;
+    }
+}
+add_action( 'manage_actor_posts_custom_column', 'tw_plays_render_actor_columns', 10, 2 );
