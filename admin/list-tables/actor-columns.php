@@ -1,9 +1,9 @@
 <?php
 /**
- * Custom List Table Columns for the 'Actor' Pod. (v2.7 - SIMPLER DEBUGGING)
+ * Custom List Table Columns for the 'Actor' Pod. (v2.8 - ULTIMATE DEBUGGING)
  *
- * This version simplifies the queries to find ANY cast/crew record for an actor,
- * ignoring the play's 'current_show' status, to isolate the problem.
+ * This version dumps all raw data for the Actor pod itself to discover the
+ * correct names of the relationship fields pointing to cast/crew records.
  *
  * @package TW_Plays
  */
@@ -51,49 +51,25 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
     switch ( $column_name ) {
 
         case 'actor_headshot':
-            // ... (code unchanged)
+            // ... code unchanged ...
             break;
         
         case 'actor_current_activity':
             
             // =========================================================================
-            // == START SIMPLER DEBUGGING BLOCK
+            // == START ULTIMATE DEBUGGING BLOCK
             // =========================================================================
             if ( ! $debug_has_run ) {
-                echo '<div style="background: #f1f1f1; border: 1px solid #ccc; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap;">';
+                echo '<div style="background: #fff; border: 2px solid #D54E21; padding: 15px; font-family: monospace; font-size: 12px; white-space: pre-wrap; margin-bottom: 20px;">';
 
-                // --- DEBUG 1: ANY CASTING RECORDS ---
-                echo "<strong>--- DEBUG (Simpler): ANY Casting Records for Actor ID: {$post_id} ---</strong><br>";
-                $cast_params = [
-                    'where' => [
-                        // We are ONLY checking the link to the actor.
-                        [ 'key' => 'actor.ID', 'value' => $post_id ],
-                    ],
-                ];
-                $casting_records = pods( 'casting_record' )->find( $cast_params );
-                echo "Total Found: " . $casting_records->total() . "<br>";
-                if ( $casting_records->total() > 0 ) {
-                    $casting_records->fetch();
-                    echo "<strong>First Casting Record Data:</strong><br>";
-                    print_r( $casting_records->data() );
-                }
-                echo "<hr>";
+                // --- DEBUG: DUMP ALL DATA FOR THIS ACTOR ---
+                echo "<strong>--- DEBUG: ALL Raw Data for Actor ID: {$post_id} ---</strong><br><br>";
+                
+                // Load the actor pod for this specific actor.
+                $actor_pod = pods( 'actor', $post_id );
 
-                // --- DEBUG 2: ANY CREW RECORDS ---
-                echo "<strong>--- DEBUG (Simpler): ANY Crew Records for Actor ID: {$post_id} ---</strong><br>";
-                $crew_params = [
-                    'where' => [
-                        // We are ONLY checking the link to the actor.
-                        [ 'key' => 'actor.ID', 'value' => $post_id ],
-                    ],
-                ];
-                $crew_records = pods( 'crew' )->find( $crew_params );
-                echo "Total Found: " . $crew_records->total() . "<br>";
-                if ( $crew_records->total() > 0 ) {
-                    $crew_records->fetch();
-                    echo "<strong>First Crew Record Data:</strong><br>";
-                    print_r( $crew_records->data() );
-                }
+                // Dump all the raw data it contains.
+                print_r( $actor_pod->data() );
 
                 echo '</div>';
                 $debug_has_run = true;
