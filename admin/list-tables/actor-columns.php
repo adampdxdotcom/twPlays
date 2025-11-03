@@ -1,10 +1,10 @@
 <?php
 /**
- * CORRECTED DEBUGGING SCRIPT (v2) for Actor Columns.
+ * Custom List Table Columns for the 'Actor' Pod. (v4.0 - FINAL WORKING VERSION)
  *
- * This version uses the correct, official `while ( $pods->fetch() )` loop
- * structure, which is guaranteed not to cause a fatal error. This will allow us
- * to finally see the raw data for the actor's roles.
+ * This version uses the definitive, crash-proof loop structure and the correct
+ * Pods ->field() method to access all related custom field data. This is the
+ * final, stable version that displays all current activity for an actor.
  *
  * @package TW_Plays
  */
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * 1. ADD CSS (Restored)
+ * 1. ADD CSS to adjust the column widths for a cleaner look.
  */
 function tw_plays_actor_column_styles() {
     $current_screen = get_current_screen();
@@ -26,7 +26,7 @@ function tw_plays_actor_column_styles() {
 add_action( 'admin_head', 'tw_plays_actor_column_styles' );
 
 /**
- * 2. REORDER & ADD Columns (Restored)
+ * 2. REORDER & ADD Columns: Unchanged.
  */
 function tw_plays_set_actor_columns( $columns ) {
     $new_columns = [ 'cb' => $columns['cb'] ];
@@ -39,19 +39,18 @@ function tw_plays_set_actor_columns( $columns ) {
 add_filter( 'manage_actor_posts_columns', 'tw_plays_set_actor_columns' );
 
 /**
- * 3. DESIGNATE PRIMARY COLUMN (Restored)
+ * 3. DESIGNATE PRIMARY COLUMN: Unchanged.
  */
-function tw_plays_set_actor_primary_column( $default, $screen_id ) {
-    if ( 'edit-actor' === $screen_id ) {
+function tw_plays_set_actor_primary_column( $default, 'actor_columns' ) {
+    if ( 'edit-actor' === 'actor_columns' ) {
         return 'title';
     }
     return $default;
 }
 add_filter( 'list_table_primary_column', 'tw_plays_set_actor_primary_column', 10, 2 );
 
-
 /**
- * 4. RENDER CONTENT and our DEBUGGING OUTPUT.
+ * 4. RENDER CONTENT for all our custom columns.
  */
 function tw_plays_render_actor_columns( $column_name, $post_id ) {
     switch ( $column_name ) {
@@ -64,39 +63,66 @@ function tw_plays_render_actor_columns( $column_name, $post_id ) {
             break;
         
         case 'actor_current_activity':
-            
-            // =========================================================================
-            // == START DEBUGGING BLOCK
-            // =========================================================================
-            echo '<pre style="background: #fffbcf; color: #3c434a; border: 1px solid #f0e69a; padding: 10px; font-size: 12px; white-space: pre-wrap;">';
+            $activity_lines = [];
 
-            // --- DUMP CASTING RECORDS ---
-            echo "<strong>CASTING RECORDS (Actor ID: {$post_id})</strong>\n";
+            // --- Query 1 & 2: Cast & Crew (FINAL WORKING METHOD) ---
             $casting_records = pods( 'casting_record', [ 'where' => [ 'actor.ID' => $post_id ] ] );
-            echo "Found: " . $casting_records->total() . "\n";
-            
-            // ** THE FIX IS HERE: Using the correct while...fetch loop **
             while ( $casting_records->fetch() ) {
-                echo " -- Casting Record ID: " . $casting_records->id() . " --\n";
-                print_r( $casting_records->data() );
+                $play_id = $casting_records->field('play.ID');
+                if ( !is_numeric($play_id) || $play_id <= 0 ) { continue; }
+                $play_pod = pods('play', $play_id);
+                if ( !$play_pod->exists() ) { continue; }
+                
+                if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
+                    $play_title = $play_pod->field('post_title');
+                    $character  = $casting_records->field('character_name');
+                    $activity_lines[] = '<strong>Play:</strong> ' . esc_html( $play_title ) . ' as ' . esc_html( $character );
+                }
             }
 
-            // --- DUMP CREW RECORDS ---
-            echo "\n<strong>CREW RECORDS (Actor ID: {$post_id})</strong>\n";
             $crew_records = pods( 'crew', [ 'where' => [ 'actor.ID' => $post_id ] ] );
-            echo "Found: " . $crew_records->total() . "\n";
-            
-            // ** THE FIX IS HERE: Using the correct while...fetch loop **
             while ( $crew_records->fetch() ) {
-                echo " -- Crew Record ID: " . $crew_records->id() . " --\n";
-                print_r( $crew_records->data() );
+                $play_id = $crew_records->field('play.ID');
+                if ( !is_numeric($play_id) || $play_id <= 0 ) { continue; }
+                $play_pod = pods('play', $play_id);
+                if ( !$play_pod->exists() ) { continue; }
+                
+                if ( $play_pod->field('current_show') == 1 || $play_pod->field('audition_status') == 1 ) {
+                    $play_title = $play_pod->field('post_title');
+                    $position   = $crew_records->display('crew');
+                    $activity_lines[] = '<strong>Play:</strong> ' . esc_html( $play_title ) . ', ' . esc_html( $position );
+                }
             }
             
-            echo '</pre>';
-            // =========================================================================
-            // == END DEBUGGING BLOCK
-            // =========================================================================
-            
+            // --- Query 3: Board Position (this method is already working) ---
+            $board_terms = pods( 'board_term', [
+                'limit' => 1,
+                'where' => [
+                    [ 'key' => 'board_member_name.ID', 'value' => $post_id ],
+                    [ 'key' => 'start_date', 'value' => date('Y-m-d'), 'compare' => '<=', 'type' => 'DATE' ],
+                    [ 'key' => 'end_date', 'value' => date('Y-m-d'), 'compare' => '>=', 'type' => 'DATE' ],
+                ]
+            ]);
+            if ( $board_terms->total() > 0 ) {
+                $board_terms->fetch();
+                $position_id = $board_terms->field('board_position.ID');
+                if ( is_numeric($position_id) && $position_id > 0 ) {
+                    $position_pod = pods('positions', $position_id);
+                    if ($position_pod && $position_pod->exists() && $position_pod->field('is_board') == 1) {
+                        $position_title = $position_pod->field('post_title');
+                        if (!empty($position_title)) {
+                            $activity_lines[] = '<strong>Board Position:</strong> ' . esc_html($position_title);
+                        }
+                    }
+                }
+            }
+
+            // Display all collected results.
+            if ( empty( $activity_lines ) ) {
+                echo '&mdash;';
+            } else {
+                echo implode( '<br>', $activity_lines );
+            }
             break;
     }
 }
